@@ -1,0 +1,140 @@
+version: '3.8'
+
+services:
+  # Mind Component - The AGI Reasoning Engine
+  mind:
+    build:
+      context: ./mind
+      dockerfile: Dockerfile
+    container_name: agi_mind
+    ports:
+      - "${MIND_PORT:-8000}:8000"
+    environment:
+      # Model Configuration
+      MODEL_PROVIDER: ${MODEL_PROVIDER:-anthropic}
+      MODEL_NAME: ${MODEL_NAME:-claude-sonnet-4-5-20250929}
+      API_KEY: ${API_KEY}
+
+      # Database Connection
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agi}:${POSTGRES_PASSWORD:-agi_password}@database:5432/${POSTGRES_DB:-agi_memory}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+
+      # Memory Configuration
+      MAX_CONTEXT_WINDOW: ${MAX_CONTEXT_WINDOW:-200000}
+      MEMORY_RETENTION_DAYS: ${MEMORY_RETENTION_DAYS:-365}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+
+      # Operational Settings
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ENABLE_WEBSOCKET: ${ENABLE_WEBSOCKET:-true}
+      SANDBOX_ENABLED: ${SANDBOX_ENABLED:-true}
+
+      # Safety Settings
+      MAX_REASONING_STEPS: ${MAX_REASONING_STEPS:-100}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
+      REQUIRE_HUMAN_APPROVAL: ${REQUIRE_HUMAN_APPROVAL:-false}
+
+    volumes:
+      - ./mind/src:/app/src:ro
+      - mind_cache:/app/cache
+      - mind_logs:/app/logs
+
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks:
+      - agi_network
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Database Component - PostgreSQL with pgvector
+  database:
+    image: pgvector/pgvector:pg16
+    container_name: agi_database
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agi_memory}
+      POSTGRES_USER: ${POSTGRES_USER:-agi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agi_password}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - ./database/schemas:/schemas:ro
+
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+    networks:
+      - agi_network
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agi} -d ${POSTGRES_DB:-agi_memory}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=vector"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "work_mem=16MB"
+
+  # Redis - Caching and Session Management
+  redis:
+    image: redis:7-alpine
+    container_name: agi_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+    volumes:
+      - redis_data:/data
+
+    networks:
+      - agi_network
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+
+networks:
+  agi_network:
+    driver: bridge
+    name: agi_network
+
+volumes:
+  postgres_data:
+    name: agi_postgres_data
+  redis_data:
+    name: agi_redis_data
+  mind_cache:
+    name: agi_mind_cache
+  mind_logs:
+    name: agi_mind_logs
