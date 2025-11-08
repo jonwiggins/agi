@@ -194,6 +194,12 @@ function setupNewTaskModal() {
     const span = document.getElementsByClassName('close')[0];
     const form = document.getElementById('new-task-form');
 
+    // Add null checks to prevent errors
+    if (!modal || !btn || !span || !form) {
+        console.warn('Modal elements not found, skipping modal setup');
+        return;
+    }
+
     btn.onclick = () => modal.classList.add('active');
     span.onclick = () => modal.classList.remove('active');
 

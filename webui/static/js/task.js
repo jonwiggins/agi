@@ -467,19 +467,35 @@ function connectWebSocket() {
 }
 
 function setupControls() {
-    document.getElementById('zoom-in').onclick = () => {
-        const scale = network.getScale();
-        network.moveTo({ scale: scale * 1.2 });
-    };
+    const zoomInBtn = document.getElementById('zoom-in');
+    const zoomOutBtn = document.getElementById('zoom-out');
+    const fitViewBtn = document.getElementById('fit-view');
 
-    document.getElementById('zoom-out').onclick = () => {
-        const scale = network.getScale();
-        network.moveTo({ scale: scale * 0.8 });
-    };
+    if (zoomInBtn) {
+        zoomInBtn.onclick = () => {
+            if (network) {
+                const scale = network.getScale();
+                network.moveTo({ scale: scale * 1.2 });
+            }
+        };
+    }
 
-    document.getElementById('fit-view').onclick = () => {
-        network.fit({ animation: true });
-    };
+    if (zoomOutBtn) {
+        zoomOutBtn.onclick = () => {
+            if (network) {
+                const scale = network.getScale();
+                network.moveTo({ scale: scale * 0.8 });
+            }
+        };
+    }
+
+    if (fitViewBtn) {
+        fitViewBtn.onclick = () => {
+            if (network) {
+                network.fit({ animation: true });
+            }
+        };
+    }
 
     // Budget continue button
     const continueBtn = document.getElementById('continue-budget-btn');
