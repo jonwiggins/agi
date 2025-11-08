@@ -47,6 +47,7 @@ class Agent:
         self.synthesis = ""
         self.learnings = []
         self.subagents: List[Agent] = []
+        self.tool_calls: List[Dict[str, Any]] = []
 
         # Metrics
         self.started_at = None
@@ -467,18 +468,53 @@ Subtasks and results:
 
     async def _execute_tool(self, tool_name: str, tool_input: Dict[str, Any]) -> Any:
         """
-        Execute a tool call.
+        Execute a tool call and record it.
         """
         logger.info("tool_called", tool=tool_name, agent_id=str(self.agent_id))
 
-        # Tool implementations (placeholders)
+        # Execute tool and get result
         if tool_name == "web_search":
-            return f"Search results for: {tool_input.get('query')}"
+            result = f"Search results for: {tool_input.get('query')}"
         elif tool_name == "db_query":
-            return []
+            result = []
         elif tool_name == "execute_code":
-            return {"stdout": "Code executed successfully", "exit_code": 0}
+            result = {"stdout": "Code executed successfully", "exit_code": 0}
         elif tool_name == "store_data":
-            return {"success": True, "stored_id": str(uuid4())}
+            result = {"success": True, "stored_id": str(uuid4())}
         else:
-            return {"error": "Unknown tool"}
+            result = {"error": "Unknown tool"}
+
+        # Record the tool call
+        self.tool_calls.append({
+            "tool": tool_name,
+            "input": tool_input,
+            "result": result,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+        return result
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Serialize agent data to dictionary including subagents and tool calls.
+        """
+        return {
+            "agent_id": str(self.agent_id),
+            "task_id": str(self.task_id),
+            "parent_id": str(self.parent_id) if self.parent_id else None,
+            "assigned_task": self.assigned_task,
+            "depth": self.depth,
+            "status": self.status,
+            "thoughts": self.thoughts,
+            "result": self.result,
+            "synthesis": self.synthesis,
+            "tool_calls": self.tool_calls,
+            "subagents": [sub.to_dict() for sub in self.subagents],
+            "metrics": {
+                "prompt_tokens": self.prompt_tokens,
+                "completion_tokens": self.completion_tokens,
+                "cost_usd": self.cost_usd,
+                "started_at": self.started_at.isoformat() if self.started_at else None,
+                "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            }
+        }

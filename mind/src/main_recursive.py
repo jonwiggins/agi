@@ -182,7 +182,7 @@ async def get_task(task_id: str):
 async def get_task_tree(task_id: str):
     """
     Get visual representation of the agent tree.
-    
+
     Returns the full tree structure showing:
     - All agents and their relationships
     - Task decompositions
@@ -193,16 +193,90 @@ async def get_task_tree(task_id: str):
         tid = UUID(task_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid task ID")
-    
+
     if tid not in tasks_db:
         raise HTTPException(status_code=404, detail="Task not found")
-    
-    # TODO: Build tree visualization from database
+
+    task_data = tasks_db[tid]
+    agent_tree = task_data.get("agent_tree")
+
+    if not agent_tree:
+        return {
+            "task_id": task_id,
+            "tree": {"nodes": [], "edges": []},
+            "total_nodes": 0
+        }
+
+    # Build nodes and edges for visualization
+    nodes = []
+    edges = []
+
+    def traverse_agents(agent_data, parent_id=None):
+        """Recursively traverse agent tree and build nodes/edges"""
+        agent_id = agent_data["agent_id"]
+
+        nodes.append({
+            "id": agent_id,
+            "label": f"Agent {agent_id[:8]}",
+            "task": agent_data["assigned_task"][:100] + "..." if len(agent_data["assigned_task"]) > 100 else agent_data["assigned_task"],
+            "status": agent_data["status"],
+            "depth": agent_data["depth"],
+            "tool_calls": len(agent_data.get("tool_calls", []))
+        })
+
+        if parent_id:
+            edges.append({"from": parent_id, "to": agent_id})
+
+        for subagent in agent_data.get("subagents", []):
+            traverse_agents(subagent, agent_id)
+
+    traverse_agents(agent_tree)
+
     return {
         "task_id": task_id,
-        "tree": "Tree visualization not yet implemented",
-        "total_nodes": 0
+        "tree": {
+            "nodes": nodes,
+            "edges": edges
+        },
+        "total_nodes": len(nodes)
     }
+
+@app.get("/tasks/{task_id}/agents/{agent_id}")
+async def get_agent_details(task_id: str, agent_id: str):
+    """
+    Get details for a specific agent including tool calls.
+    """
+    try:
+        tid = UUID(task_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    if tid not in tasks_db:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    task_data = tasks_db[tid]
+    agent_tree = task_data.get("agent_tree")
+
+    if not agent_tree:
+        raise HTTPException(status_code=404, detail="Agent tree not available")
+
+    # Find agent in tree
+    def find_agent(agent_data, target_id):
+        """Recursively search for agent by ID"""
+        if agent_data["agent_id"] == target_id:
+            return agent_data
+        for subagent in agent_data.get("subagents", []):
+            found = find_agent(subagent, target_id)
+            if found:
+                return found
+        return None
+
+    agent_data = find_agent(agent_tree, agent_id)
+
+    if not agent_data:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    return agent_data
 
 @app.websocket("/ws/tasks/{task_id}")
 async def websocket_task_updates(websocket: WebSocket, task_id: str):
@@ -323,6 +397,7 @@ async def process_task(task_id: UUID):
         task_data["status"] = "completed"
         task_data["result"] = result
         task_data["completed_at"] = datetime.utcnow()
+        task_data["agent_tree"] = root_agent.to_dict()  # Store complete agent tree
         task_data["metrics"] = {
             "prompt_tokens": root_agent.prompt_tokens,
             "completion_tokens": root_agent.completion_tokens,
@@ -334,7 +409,7 @@ async def process_task(task_id: UUID):
                 task_data["completed_at"] - task_data["created_at"]
             ).total_seconds()
         }
-        
+
         logger.info(
             "task_completed",
             task_id=str(task_id),
@@ -344,6 +419,7 @@ async def process_task(task_id: UUID):
     except asyncio.TimeoutError:
         task_data["status"] = "timeout"
         task_data["completed_at"] = datetime.utcnow()
+        task_data["agent_tree"] = root_agent.to_dict() if 'root_agent' in locals() else None
         task_data["error"] = {
             "type": "TimeoutError",
             "message": f"Task exceeded timeout of {task_data['timeout']} seconds",
@@ -355,6 +431,7 @@ async def process_task(task_id: UUID):
         import traceback
         task_data["status"] = "failed"
         task_data["completed_at"] = datetime.utcnow()
+        task_data["agent_tree"] = root_agent.to_dict() if 'root_agent' in locals() else None
         task_data["error"] = {
             "type": type(e).__name__,
             "message": str(e),

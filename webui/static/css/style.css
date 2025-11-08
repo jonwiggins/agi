@@ -608,6 +608,67 @@ body {
     color: var(--gray);
 }
 
+/* Tool Call Display */
+.tool-call-item {
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.tool-call-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.tool-name {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 0.875rem;
+}
+
+.tool-time {
+    font-size: 0.75rem;
+    color: var(--gray);
+}
+
+.tool-call-details summary {
+    cursor: pointer;
+    color: var(--dark);
+    font-size: 0.8125rem;
+    padding: 0.25rem;
+    user-select: none;
+}
+
+.tool-call-details summary:hover {
+    color: var(--primary);
+}
+
+.tool-call-content {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+}
+
+.tool-call-content strong {
+    display: block;
+    margin-top: 0.5rem;
+    margin-bottom: 0.25rem;
+    color: var(--dark);
+}
+
+.tool-call-content pre {
+    background: #1f2937;
+    color: #f9fafb;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    overflow-x: auto;
+    font-size: 0.6875rem;
+    line-height: 1.4;
+}
+
 /* Utilities */
 .mt-2 { margin-top: 1rem; }
 .mb-2 { margin-bottom: 1rem; }

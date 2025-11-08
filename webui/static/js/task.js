@@ -246,38 +246,98 @@ function getNodeColor(status) {
     return colors[status] || colors.created;
 }
 
-function showAgentDetails(nodeId) {
-    // Mock agent details - in production, fetch from API
-    const detailsHtml = `
-        <div class="details-grid">
-            <div class="detail-item">
-                <span class="detail-label">Agent ID:</span>
-                <span>${nodeId}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Status:</span>
-                <span>Running</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Depth:</span>
-                <span>1</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Tool Calls:</span>
-                <span>3</span>
-            </div>
-        </div>
-        <div class="mt-2">
-            <strong>Task:</strong>
-            <p>Analyzing subtask and determining approach...</p>
-        </div>
-        <div class="mt-2">
-            <strong>Thoughts:</strong>
-            <p>This task requires decomposition into smaller parts...</p>
-        </div>
-    `;
+async function showAgentDetails(nodeId) {
+    try {
+        const response = await fetch(`/api/tasks/${TASK_ID}/agents/${nodeId}`);
+        const agent = await response.json();
 
-    document.getElementById('agent-details').innerHTML = detailsHtml;
+        if (agent.error) {
+            document.getElementById('agent-details').innerHTML = `
+                <p class="empty-state">Unable to load agent details</p>
+            `;
+            return;
+        }
+
+        // Build tool calls section
+        let toolCallsHtml = '';
+        if (agent.tool_calls && agent.tool_calls.length > 0) {
+            toolCallsHtml = `
+                <div class="mt-2">
+                    <strong>Tool Calls (${agent.tool_calls.length}):</strong>
+                    ${agent.tool_calls.map(tc => `
+                        <div class="tool-call-item">
+                            <div class="tool-call-header">
+                                <span class="tool-name">${tc.tool}</span>
+                                <span class="tool-time">${new Date(tc.timestamp).toLocaleTimeString()}</span>
+                            </div>
+                            <details class="tool-call-details">
+                                <summary>Parameters & Result</summary>
+                                <div class="tool-call-content">
+                                    <strong>Input:</strong>
+                                    <pre>${JSON.stringify(tc.input, null, 2)}</pre>
+                                    <strong>Output:</strong>
+                                    <pre>${JSON.stringify(tc.result, null, 2)}</pre>
+                                </div>
+                            </details>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        const detailsHtml = `
+            <div class="details-grid">
+                <div class="detail-item">
+                    <span class="detail-label">Agent ID:</span>
+                    <span title="${agent.agent_id}">${agent.agent_id.substring(0, 8)}...</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Status:</span>
+                    <span class="status-badge ${agent.status}">${agent.status}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Depth:</span>
+                    <span>${agent.depth}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Tool Calls:</span>
+                    <span>${agent.tool_calls ? agent.tool_calls.length : 0}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Cost:</span>
+                    <span class="cost-value">${formatCost(agent.metrics?.cost_usd || 0)}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Tokens:</span>
+                    <span>${formatNumber((agent.metrics?.prompt_tokens || 0) + (agent.metrics?.completion_tokens || 0))}</span>
+                </div>
+            </div>
+            <div class="mt-2">
+                <strong>Task:</strong>
+                <p>${agent.assigned_task}</p>
+            </div>
+            ${agent.thoughts ? `
+                <div class="mt-2">
+                    <strong>Thoughts:</strong>
+                    <p>${agent.thoughts}</p>
+                </div>
+            ` : ''}
+            ${agent.result ? `
+                <div class="mt-2">
+                    <strong>Result:</strong>
+                    <pre>${JSON.stringify(agent.result, null, 2)}</pre>
+                </div>
+            ` : ''}
+            ${toolCallsHtml}
+        `;
+
+        document.getElementById('agent-details').innerHTML = detailsHtml;
+    } catch (error) {
+        console.error('Error loading agent details:', error);
+        document.getElementById('agent-details').innerHTML = `
+            <p class="empty-state">Error loading agent details</p>
+        `;
+    }
 }
 
 function connectWebSocket() {

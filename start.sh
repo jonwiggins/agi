@@ -87,3 +87,6 @@ echo '    -d '"'"'{"task": "Explain recursion", "max_depth": 3}'"'"' | jq'
 echo ""
 echo "For more commands: make help"
 echo ""
+echo "Attaching to logs (Ctrl+C to exit, services will keep running)..."
+echo ""
+docker-compose logs -f

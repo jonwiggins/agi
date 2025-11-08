@@ -113,6 +113,15 @@ async def get_task_tree(task_id: str):
             }
         }
 
+@app.get("/api/tasks/{task_id}/agents/{agent_id}")
+async def get_agent_details(task_id: str, agent_id: str):
+    """Get specific agent details including tool calls"""
+    try:
+        response = await http_client.get(f"/tasks/{task_id}/agents/{agent_id}")
+        return response.json()
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.post("/api/tasks")
 async def create_task(task_data: dict):
     """Create a new task"""
