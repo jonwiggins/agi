@@ -11,7 +11,7 @@ elapsed=0
 
 all_healthy() {
     for service in "${services[@]}"; do
-        if ! docker-compose ps | grep "$service" | grep -q "healthy\|Up"; then
+        if ! docker compose ps | grep "$service" | grep -q "healthy\|Up"; then
             return 1
         fi
     done
@@ -23,12 +23,12 @@ while [ $elapsed -lt $max_wait ]; do
         echo "✓ All services are healthy!"
         exit 0
     fi
-    
+
     echo "Waiting... ($elapsed/$max_wait seconds)"
     sleep 2
     elapsed=$((elapsed + 2))
 done
 
 echo "❌ Services did not become healthy within $max_wait seconds"
-docker-compose ps
+docker compose ps
 exit 1

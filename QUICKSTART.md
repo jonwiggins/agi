@@ -5,7 +5,7 @@ Get the AGI Platform running in under 5 minutes!
 ## Prerequisites
 
 - Docker 20.10+
-- Docker Compose 2.0+
+- Docker Compose v2.40.3+ (plugin version)
 - 8GB+ RAM
 - Anthropic API key ([get one here](https://console.anthropic.com/))
 
@@ -42,7 +42,7 @@ nano .env
 make up
 
 # Or using Docker Compose directly
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 3. Verify
@@ -86,10 +86,10 @@ wscat -c ws://localhost:8000/ws/tasks/{task_id}
 
 ```bash
 # All logs
-docker-compose logs -f
+docker compose logs -f
 
 # Mind only
-docker-compose logs -f mind
+docker compose logs -f mind
 
 # Using Make
 make logs
@@ -99,14 +99,14 @@ make logs
 
 ```bash
 # Check status
-docker-compose ps
+docker compose ps
 make status
 
 # View stats
 curl http://localhost:8000/stats | jq
 
 # Stop platform
-docker-compose down
+docker compose down
 make down
 
 # Development mode (hot-reload)
@@ -135,7 +135,7 @@ This starts:
 
 ```bash
 # Check logs
-docker-compose logs
+docker compose logs
 
 # Reset everything
 make reset
@@ -145,7 +145,7 @@ make reset
 
 ```bash
 # Check mind logs
-docker-compose logs mind
+docker compose logs mind
 
 # Verify API key is set
 grep ANTHROPIC_API_KEY .env
@@ -155,10 +155,10 @@ grep ANTHROPIC_API_KEY .env
 
 ```bash
 # Check database health
-docker-compose exec database pg_isready -U agi
+docker compose exec database pg_isready -U agi
 
 # View database logs
-docker-compose logs database
+docker compose logs database
 ```
 
 ## Example Tasks to Try
@@ -210,7 +210,7 @@ curl -X POST http://localhost:8000/tasks \
 
 ```bash
 # Stop containers
-docker-compose down
+docker compose down
 
 # Remove everything (including volumes)
 make clean

@@ -304,7 +304,7 @@ Fast inter-agent communication:
 
 2. **Launch the platform:**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 3. **Submit a task:**

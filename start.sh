@@ -27,11 +27,11 @@ fi
 echo "✓ Configuration found"
 echo ""
 echo "Building containers..."
-docker-compose build
+docker compose build
 
 echo ""
 echo "Starting platform..."
-docker-compose up -d
+docker compose up -d
 
 echo ""
 echo "Waiting for services to be healthy..."
@@ -45,7 +45,7 @@ for i in {1..30}; do
     fi
     if [ $i -eq 30 ]; then
         echo "❌ Mind service failed to start"
-        docker-compose logs mind
+        docker compose logs mind
         exit 1
     fi
     sleep 2
@@ -76,9 +76,9 @@ echo "  🏥 Health Check:  http://localhost:8000/health"
 echo "  📊 Stats:         http://localhost:8000/stats"
 echo ""
 echo "Quick Commands:"
-echo "  View logs:        docker-compose logs -f"
-echo "  Stop platform:    docker-compose down"
-echo "  View status:      docker-compose ps"
+echo "  View logs:        docker compose logs -f"
+echo "  Stop platform:    docker compose down"
+echo "  View status:      docker compose ps"
 echo ""
 echo "Example Task Submission:"
 echo '  curl -X POST http://localhost:8000/tasks \'
@@ -89,4 +89,4 @@ echo "For more commands: make help"
 echo ""
 echo "Attaching to logs (Ctrl+C to exit, services will keep running)..."
 echo ""
-docker-compose logs -f
+docker compose logs -f

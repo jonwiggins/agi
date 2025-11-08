@@ -18,11 +18,11 @@ help:
 	@echo "  make reset      - Complete reset (clean + rebuild)"
 
 build:
-	docker-compose build
+	docker compose build
 
 up:
 	@echo "Starting AGI Platform in production mode..."
-	docker-compose up -d
+	docker compose up -d
 	@echo ""
 	@echo "Platform started! Access points:"
 	@echo "  - WebUI: http://localhost:3000"
@@ -34,7 +34,7 @@ up:
 
 dev:
 	@echo "Starting AGI Platform in development mode..."
-	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 	@echo ""
 	@echo "Development mode access points:"
 	@echo "  - WebUI: http://localhost:3000"
@@ -43,20 +43,20 @@ dev:
 	@echo "  - Redis Commander: http://localhost:8081"
 
 down:
-	docker-compose down
+	docker compose down
 
 logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 logs-mind:
-	docker-compose logs -f mind
+	docker compose logs -f mind
 
 status:
 	@echo "Container Status:"
-	@docker-compose ps
+	@docker compose ps
 	@echo ""
 	@echo "Health Checks:"
-	@docker inspect --format='{{.Name}}: {{.State.Health.Status}}' $$(docker-compose ps -q) 2>/dev/null || true
+	@docker inspect --format='{{.Name}}: {{.State.Health.Status}}' $$(docker compose ps -q) 2>/dev/null || true
 
 test:
 	@echo "Submitting test task..."
@@ -67,14 +67,14 @@ test:
 	@echo "Check task status with: curl http://localhost:8000/tasks/{task_id} | jq"
 
 shell-mind:
-	docker-compose exec mind /bin/bash
+	docker compose exec mind /bin/bash
 
 shell-db:
-	docker-compose exec database psql -U agi -d agi_memory
+	docker compose exec database psql -U agi -d agi_memory
 
 clean:
 	@echo "Stopping and removing all containers and volumes..."
-	docker-compose down -v
+	docker compose down -v
 	@echo "Cleanup complete!"
 
 reset: clean build up
