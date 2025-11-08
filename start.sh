@@ -51,12 +51,26 @@ for i in {1..30}; do
     sleep 2
 done
 
+# Check WebUI
+for i in {1..20}; do
+    if curl -s http://localhost:3000/api/health > /dev/null 2>&1; then
+        echo "✓ WebUI service is healthy"
+        break
+    fi
+    if [ $i -eq 20 ]; then
+        echo "⚠️  WebUI service failed to start (continuing anyway)"
+        break
+    fi
+    sleep 2
+done
+
 echo ""
 echo "=========================================="
 echo "  🚀 AGI Platform is running!"
 echo "=========================================="
 echo ""
 echo "Access Points:"
+echo "  🌐 WebUI:         http://localhost:3000"
 echo "  📡 Mind API:      http://localhost:8000"
 echo "  🏥 Health Check:  http://localhost:8000/health"
 echo "  📊 Stats:         http://localhost:8000/stats"

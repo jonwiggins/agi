@@ -72,6 +72,34 @@ services:
       retries: 3
       start_period: 40s
 
+  # WebUI Component - Real-time Visualization
+  webui:
+    build:
+      context: ./webui
+      dockerfile: Dockerfile
+    container_name: agi_webui
+    ports:
+      - "3000:3000"
+    environment:
+      MIND_API_URL: http://mind:8000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+    depends_on:
+      mind:
+        condition: service_healthy
+
+    networks:
+      - agi_network
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   # Database Component - PostgreSQL with pgvector
   database:
     image: pgvector/pgvector:pg16

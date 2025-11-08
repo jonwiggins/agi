@@ -25,6 +25,7 @@ up:
 	docker-compose up -d
 	@echo ""
 	@echo "Platform started! Access points:"
+	@echo "  - WebUI: http://localhost:3000"
 	@echo "  - Mind API: http://localhost:8000"
 	@echo "  - Health Check: http://localhost:8000/health"
 	@echo "  - Database: localhost:5432"
@@ -36,6 +37,7 @@ dev:
 	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
 	@echo ""
 	@echo "Development mode access points:"
+	@echo "  - WebUI: http://localhost:3000"
 	@echo "  - Mind API: http://localhost:8000"
 	@echo "  - pgAdmin: http://localhost:5050 (admin@agi.local / admin)"
 	@echo "  - Redis Commander: http://localhost:8081"
