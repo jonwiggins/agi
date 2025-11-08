@@ -317,13 +317,24 @@ async def process_task(task_id: UUID):
     except asyncio.TimeoutError:
         task_data["status"] = "timeout"
         task_data["completed_at"] = datetime.utcnow()
+        task_data["error"] = {
+            "type": "TimeoutError",
+            "message": f"Task exceeded timeout of {task_data['timeout']} seconds",
+            "timestamp": datetime.utcnow().isoformat()
+        }
         logger.error("task_timeout", task_id=str(task_id))
-        
+
     except Exception as e:
+        import traceback
         task_data["status"] = "failed"
         task_data["completed_at"] = datetime.utcnow()
-        task_data["error"] = str(e)
-        logger.error("task_failed", task_id=str(task_id), error=str(e))
+        task_data["error"] = {
+            "type": type(e).__name__,
+            "message": str(e),
+            "traceback": traceback.format_exc(),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        logger.error("task_failed", task_id=str(task_id), error=str(e), traceback=traceback.format_exc())
 
 # ==========================================
 # Startup

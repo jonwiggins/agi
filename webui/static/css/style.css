@@ -273,6 +273,11 @@ body {
     color: #991b1b;
 }
 
+.status-badge.timeout {
+    background: #fef3c7;
+    color: #92400e;
+}
+
 /* Grid */
 .grid-2 {
     display: grid;
@@ -324,7 +329,8 @@ body {
 .legend-dot.running { background: #3b82f6; }
 .legend-dot.completed { background: var(--success); }
 .legend-dot.failed { background: var(--danger); }
-.legend-dot.waiting { background: var(--warning); }
+.legend-dot.timeout { background: #f59e0b; }
+.legend-dot.waiting { background: #9ca3af; }
 
 /* Details Grid */
 .details-grid {
@@ -365,6 +371,62 @@ body {
     font-size: 0.875rem;
     max-height: 400px;
     overflow-y: auto;
+}
+
+/* Error Display */
+.error-box {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.error-type {
+    font-weight: 700;
+    color: #991b1b;
+    font-size: 1.125rem;
+    margin-bottom: 0.75rem;
+}
+
+.error-message {
+    color: #dc2626;
+    margin-bottom: 0.75rem;
+    font-size: 0.9375rem;
+}
+
+.error-timestamp {
+    color: var(--gray);
+    font-size: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.error-traceback {
+    margin-top: 1rem;
+}
+
+.error-traceback summary {
+    cursor: pointer;
+    color: var(--primary);
+    font-weight: 600;
+    padding: 0.5rem;
+    background: #f3f4f6;
+    border-radius: 0.25rem;
+    user-select: none;
+}
+
+.error-traceback summary:hover {
+    background: #e5e7eb;
+}
+
+.error-traceback pre {
+    margin-top: 0.5rem;
+    padding: 1rem;
+    background: #1f2937;
+    color: #f9fafb;
+    border-radius: 0.25rem;
+    overflow-x: auto;
+    font-size: 0.75rem;
+    line-height: 1.5;
 }
 
 /* Modal */

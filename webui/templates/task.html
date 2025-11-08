@@ -46,6 +46,7 @@
                     <div class="legend-item"><span class="legend-dot running"></span> Running</div>
                     <div class="legend-item"><span class="legend-dot completed"></span> Completed</div>
                     <div class="legend-item"><span class="legend-dot failed"></span> Failed</div>
+                    <div class="legend-item"><span class="legend-dot timeout"></span> Timeout</div>
                     <div class="legend-item"><span class="legend-dot waiting"></span> Waiting</div>
                 </div>
             </div>
@@ -94,6 +95,19 @@
                     <h3>Selected Agent</h3>
                     <div id="agent-details">
                         <p class="empty-state">Click on a node to view agent details</p>
+                    </div>
+                </div>
+
+                <div class="section" id="error-section" style="display: none;">
+                    <h3>Error Details</h3>
+                    <div class="error-box">
+                        <div class="error-type" id="error-type"></div>
+                        <div class="error-message" id="error-message"></div>
+                        <div class="error-timestamp" id="error-timestamp"></div>
+                        <details class="error-traceback">
+                            <summary>Stack Trace</summary>
+                            <pre id="error-traceback"></pre>
+                        </details>
                     </div>
                 </div>
 

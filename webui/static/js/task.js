@@ -55,6 +55,25 @@ async function loadTaskDetails() {
         document.getElementById('detail-tokens').textContent = formatNumber(task.metrics?.total_tokens);
         document.getElementById('detail-avg-cost').textContent = formatCost(avgCost);
 
+        // Show error section if task failed
+        if (task.status === 'failed' || task.status === 'timeout') {
+            const errorSection = document.getElementById('error-section');
+            errorSection.style.display = 'block';
+
+            if (task.error) {
+                document.getElementById('error-type').textContent = task.error.type || 'Error';
+                document.getElementById('error-message').textContent = task.error.message || 'Unknown error';
+                document.getElementById('error-timestamp').textContent =
+                    `Occurred at: ${new Date(task.error.timestamp).toLocaleString()}`;
+
+                if (task.error.traceback) {
+                    document.getElementById('error-traceback').textContent = task.error.traceback;
+                }
+            }
+        } else {
+            document.getElementById('error-section').style.display = 'none';
+        }
+
         // Update result if completed
         if (task.result) {
             const resultBox = document.getElementById('task-result');
@@ -219,7 +238,8 @@ function getNodeColor(status) {
         running: { background: '#3b82f6', border: '#2563eb' },
         completed: { background: '#10b981', border: '#059669' },
         failed: { background: '#ef4444', border: '#dc2626' },
-        waiting: { background: '#f59e0b', border: '#d97706' },
+        timeout: { background: '#f59e0b', border: '#d97706' },
+        waiting: { background: '#9ca3af', border: '#6b7280' },
         created: { background: '#9ca3af', border: '#6b7280' }
     };
 
