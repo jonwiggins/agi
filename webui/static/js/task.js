@@ -35,7 +35,7 @@ async function loadTaskDetails() {
         currentTaskData = task;
 
         // Update task details
-        document.getElementById('task-title').textContent = task.task || 'Untitled Task';
+        document.getElementById('task-title').textContent = task.context?.title || task.task || 'Untitled Task';
         document.getElementById('task-status').textContent = task.status;
         document.getElementById('task-status').className = `status-badge ${task.status}`;
 

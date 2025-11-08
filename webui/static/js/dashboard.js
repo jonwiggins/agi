@@ -53,11 +53,11 @@ async function loadTasks() {
         container.innerHTML = tasks.map(task => `
             <div class="task-card" onclick="window.location.href='/task/${task.task_id}'">
                 <div class="task-card-header">
-                    <div class="task-title">${truncate(task.task || 'Untitled Task', 60)}</div>
+                    <div class="task-title">${truncate(task.context?.title || task.task || 'Untitled Task', 60)}</div>
                     <div class="status-badge ${task.status}">${task.status}</div>
                 </div>
                 <div class="task-description">
-                    ${truncate(task.context?.description || task.task || '', 100)}
+                    ${truncate(task.task || '', 100)}
                 </div>
                 <div class="task-meta">
                     <span>Created: ${formatDate(task.created_at)}</span>
@@ -92,7 +92,9 @@ function setupNewTaskModal() {
 
         const taskData = {
             task: document.getElementById('task-description').value,
-            context: {},
+            context: {
+                title: document.getElementById('task-title').value
+            },
             max_depth: parseInt(document.getElementById('max-depth').value),
             max_agents: parseInt(document.getElementById('max-agents').value),
             timeout: 1800
