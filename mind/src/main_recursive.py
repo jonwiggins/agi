@@ -4,7 +4,7 @@ AGI Mind - Recursive Subagent Architecture API Server
 
 import os
 import asyncio
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
 from uuid import UUID, uuid4
 from datetime import datetime
 
@@ -60,16 +60,19 @@ class TaskResponse(BaseModel):
     task_id: str
     status: str
     created_at: str
-    agent_tree_id: str = None
+    agent_tree_id: Optional[str] = None
 
 class TaskResult(BaseModel):
     """Model for task result"""
     task_id: str
+    task: str
     status: str
-    result: Dict[str, Any] = None
-    metrics: Dict[str, Any] = None
+    context: Optional[Dict[str, Any]] = None
+    result: Optional[Dict[str, Any]] = None
+    metrics: Optional[Dict[str, Any]] = None
+    error: Optional[Dict[str, Any]] = None
     created_at: str
-    completed_at: str = None
+    completed_at: Optional[str] = None
 
 # ==========================================
 # API Endpoints
@@ -129,6 +132,27 @@ async def create_task(task_create: TaskCreate):
         agent_tree_id=str(uuid4())
     )
 
+@app.get("/tasks", response_model=List[TaskResult])
+async def list_tasks():
+    """List all tasks"""
+    results = []
+    for tid, task_data in tasks_db.items():
+        results.append(TaskResult(
+            task_id=str(tid),
+            task=task_data["task"],
+            status=task_data["status"],
+            context=task_data.get("context"),
+            result=task_data.get("result"),
+            metrics=task_data.get("metrics"),
+            error=task_data.get("error"),
+            created_at=task_data["created_at"].isoformat(),
+            completed_at=task_data.get("completed_at").isoformat() if task_data.get("completed_at") else None
+        ))
+
+    # Sort by created_at descending (newest first)
+    results.sort(key=lambda x: x.created_at, reverse=True)
+    return results
+
 @app.get("/tasks/{task_id}", response_model=TaskResult)
 async def get_task(task_id: str):
     """Get task status and results"""
@@ -136,17 +160,20 @@ async def get_task(task_id: str):
         tid = UUID(task_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid task ID")
-    
+
     if tid not in tasks_db:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     task_data = tasks_db[tid]
-    
+
     return TaskResult(
         task_id=str(tid),
+        task=task_data["task"],
         status=task_data["status"],
+        context=task_data.get("context"),
         result=task_data.get("result"),
         metrics=task_data.get("metrics"),
+        error=task_data.get("error"),
         created_at=task_data["created_at"].isoformat(),
         completed_at=task_data.get("completed_at").isoformat() if task_data.get("completed_at") else None
     )
