@@ -110,6 +110,9 @@ async function loadTasks() {
 
         // Render modern task cards
         container.innerHTML = tasks.map((task, index) => createTaskCard(task, index)).join('');
+
+        // Mark first load as complete
+        isFirstTaskLoad = false;
     } catch (error) {
         console.error('Error loading tasks:', error);
         const container = document.getElementById('tasks-container');
@@ -132,6 +135,9 @@ async function loadTasks() {
     }
 }
 
+// Track if this is the first load to control animations
+let isFirstTaskLoad = true;
+
 function createTaskCard(task, index) {
     const statusClass = task.status || 'processing';
     const statusText = task.status || 'Processing';
@@ -140,8 +146,11 @@ function createTaskCard(task, index) {
     const createdDate = formatDate(task.created_at);
     const taskId = task.task_id.substring(0, 8);
 
+    // Only animate on first load
+    const animationStyle = isFirstTaskLoad ? `animation-delay: ${index * 0.05}s;` : 'opacity: 1;';
+
     return `
-        <div class="task-card-modern" style="animation-delay: ${index * 0.05}s;" onclick="window.location.href='/task/${task.task_id}'">
+        <div class="task-card-modern" style="${animationStyle}" onclick="window.location.href='/task/${task.task_id}'">
             <div class="task-card-modern-header">
                 <div class="task-card-modern-title">${escapeHtml(taskTitle)}</div>
                 <div class="status-badge ${statusClass}">

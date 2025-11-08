@@ -6,12 +6,13 @@ let currentTaskData = null;
 
 // Load task data on page load
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadTaskDetails();
+    // Immediately start loading task details
+    loadTaskDetails(); // Don't await - let it load in parallel
     initializeTree();
     connectWebSocket();
     setupControls();
 
-    // Refresh task details based on status
+    // Start auto-refresh immediately (will wait for first load to complete via currentTaskData check)
     startAutoRefresh();
 });
 
