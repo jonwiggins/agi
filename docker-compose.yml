@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  agi-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agi-platform
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      # Anthropic API Configuration
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+
+      # Memory Configuration
+      - CHROMA_PERSIST_DIRECTORY=/app/data/chroma
+      - MEMORY_COLLECTION_NAME=${MEMORY_COLLECTION_NAME:-agi_memories}
+
+      # Agent Configuration
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-claude-sonnet-4-5-20250929}
+      - MAX_MEMORY_RESULTS=${MAX_MEMORY_RESULTS:-5}
+      - MEMORY_RELEVANCE_THRESHOLD=${MEMORY_RELEVANCE_THRESHOLD:-0.7}
+
+      # Server Configuration
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      # Persist ChromaDB data
+      - chroma-data:/app/data/chroma
+
+      # Optional: Mount custom tools (uncomment to use)
+      # - ./tools:/app/tools:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - agi-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  # Optional: Add a simple web UI using nginx
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: agi-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - agi-platform
+  #   networks:
+  #     - agi-network
+
+volumes:
+  chroma-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/chroma
+
+networks:
+  agi-network:
+    driver: bridge
