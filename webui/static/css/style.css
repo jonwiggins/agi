@@ -51,6 +51,12 @@ body {
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--primary);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.logo:hover {
+    color: var(--primary-dark);
 }
 
 .nav-links {
