@@ -61,6 +61,34 @@ class Agent:
         )
         self.model = os.getenv("MODEL_NAME", "claude-sonnet-4-5-20250929")
 
+    def _calculate_cost(self, input_tokens: int, output_tokens: int) -> float:
+        """
+        Calculate cost in USD based on token usage and model pricing.
+
+        Pricing (as of Jan 2025):
+        - Claude Sonnet 4.5: $3/MTok input, $15/MTok output
+        - Claude Opus 4: $15/MTok input, $75/MTok output
+        - Claude Haiku 3.5: $1/MTok input, $5/MTok output
+        """
+        pricing = {
+            "claude-sonnet-4-5-20250929": {"input": 3.0, "output": 15.0},
+            "claude-opus-4-20250514": {"input": 15.0, "output": 75.0},
+            "claude-3-5-sonnet-20241022": {"input": 3.0, "output": 15.0},
+            "claude-3-haiku-20240307": {"input": 0.25, "output": 1.25},
+        }
+
+        # Get pricing for current model (default to Sonnet 4.5)
+        model_pricing = pricing.get(
+            self.model,
+            {"input": 3.0, "output": 15.0}
+        )
+
+        # Calculate cost per million tokens
+        input_cost = (input_tokens / 1_000_000) * model_pricing["input"]
+        output_cost = (output_tokens / 1_000_000) * model_pricing["output"]
+
+        return input_cost + output_cost
+
     async def solve(self) -> Dict[str, Any]:
         """
         Main recursive solving algorithm.
@@ -153,6 +181,10 @@ Be concise. Only decompose if the task is genuinely complex."""
 
         self.prompt_tokens += response.usage.input_tokens
         self.completion_tokens += response.usage.output_tokens
+        self.cost_usd += self._calculate_cost(
+            response.usage.input_tokens,
+            response.usage.output_tokens
+        )
 
         # Parse response (simplified - in production use structured output)
         content = response.content[0].text
@@ -208,6 +240,10 @@ Use tools as needed and provide a final answer."""
 
             self.prompt_tokens += response.usage.input_tokens
             self.completion_tokens += response.usage.output_tokens
+            self.cost_usd += self._calculate_cost(
+                response.usage.input_tokens,
+                response.usage.output_tokens
+            )
 
             # Check if we're done
             if response.stop_reason == "end_turn":
@@ -321,6 +357,10 @@ Respond with JSON: {{"decision": "accept/reject/revise", "score": 0.0-1.0, "reas
 
         self.prompt_tokens += response.usage.input_tokens
         self.completion_tokens += response.usage.output_tokens
+        self.cost_usd += self._calculate_cost(
+            response.usage.input_tokens,
+            response.usage.output_tokens
+        )
 
         content = response.content[0].text
 
@@ -357,6 +397,10 @@ Subtasks and results:
 
         self.prompt_tokens += response.usage.input_tokens
         self.completion_tokens += response.usage.output_tokens
+        self.cost_usd += self._calculate_cost(
+            response.usage.input_tokens,
+            response.usage.output_tokens
+        )
 
         synthesis = response.content[0].text
         self.synthesis = synthesis

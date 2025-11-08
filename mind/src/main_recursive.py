@@ -211,18 +211,46 @@ async def websocket_task_updates(websocket: WebSocket, task_id: str):
 
 @app.get("/stats")
 async def get_stats():
-    """Get system statistics"""
+    """Get system statistics including cost tracking"""
     total_tasks = len(tasks_db)
     completed = sum(1 for t in tasks_db.values() if t["status"] == "completed")
     processing = sum(1 for t in tasks_db.values() if t["status"] == "processing")
     failed = sum(1 for t in tasks_db.values() if t["status"] == "failed")
-    
+
+    # Calculate cost statistics
+    total_cost = sum(
+        t.get("metrics", {}).get("cost_usd", 0.0)
+        for t in tasks_db.values()
+    )
+
+    avg_cost_per_task = total_cost / total_tasks if total_tasks > 0 else 0.0
+
+    # Get most expensive task
+    most_expensive = None
+    if tasks_db:
+        most_expensive_task = max(
+            tasks_db.values(),
+            key=lambda t: t.get("metrics", {}).get("cost_usd", 0.0),
+            default=None
+        )
+        if most_expensive_task:
+            most_expensive = {
+                "task_id": str(most_expensive_task["id"]),
+                "cost_usd": most_expensive_task.get("metrics", {}).get("cost_usd", 0.0),
+                "description": most_expensive_task["task"][:100]
+            }
+
     return {
         "tasks": {
             "total": total_tasks,
             "completed": completed,
             "processing": processing,
             "failed": failed
+        },
+        "costs": {
+            "total_usd": round(total_cost, 4),
+            "average_per_task_usd": round(avg_cost_per_task, 4),
+            "most_expensive_task": most_expensive
         },
         "uptime_seconds": 0  # TODO: Track actual uptime
     }
@@ -256,6 +284,14 @@ async def process_task(task_id: UUID):
             timeout=task_data["timeout"]
         )
         
+        # Calculate total cost recursively
+        def calculate_total_cost(agent):
+            """Recursively calculate total cost including all subagents"""
+            total = agent.cost_usd
+            for subagent in agent.subagents:
+                total += calculate_total_cost(subagent)
+            return total
+
         # Update task with results
         task_data["status"] = "completed"
         task_data["result"] = result
@@ -263,8 +299,10 @@ async def process_task(task_id: UUID):
         task_data["metrics"] = {
             "prompt_tokens": root_agent.prompt_tokens,
             "completion_tokens": root_agent.completion_tokens,
+            "total_tokens": root_agent.prompt_tokens + root_agent.completion_tokens,
             "total_agents": 1 + len(root_agent.subagents),
             "max_depth": root_agent.depth,
+            "cost_usd": calculate_total_cost(root_agent),
             "execution_time_seconds": (
                 task_data["completed_at"] - task_data["created_at"]
             ).total_seconds()

@@ -22,9 +22,20 @@ async function loadStats() {
             document.getElementById('completed-tasks').textContent = data.tasks.completed || 0;
             document.getElementById('failed-tasks').textContent = data.tasks.failed || 0;
         }
+
+        if (data.costs) {
+            document.getElementById('total-cost').textContent = formatCost(data.costs.total_usd || 0);
+            document.getElementById('avg-cost').textContent = formatCost(data.costs.average_per_task_usd || 0);
+        }
     } catch (error) {
         console.error('Error loading stats:', error);
     }
+}
+
+function formatCost(amount) {
+    if (amount === 0) return '$0.00';
+    if (amount < 0.01) return `$${amount.toFixed(4)}`;
+    return `$${amount.toFixed(2)}`;
 }
 
 async function loadTasks() {

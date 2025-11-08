@@ -2,6 +2,7 @@
 
 let network = null;
 let websocket = null;
+let currentTaskData = null;
 
 // Load task data on page load
 document.addEventListener('DOMContentLoaded', async () => {
@@ -14,10 +15,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     setInterval(loadTaskDetails, 3000);
 });
 
+function formatCost(amount) {
+    if (amount === 0 || amount === null || amount === undefined) return '$0.00';
+    if (amount < 0.01) return `$${amount.toFixed(4)}`;
+    return `$${amount.toFixed(2)}`;
+}
+
+function formatNumber(num) {
+    if (num === null || num === undefined) return '-';
+    return num.toLocaleString();
+}
+
 async function loadTaskDetails() {
     try {
         const response = await fetch(`/api/tasks/${TASK_ID}`);
         const task = await response.json();
+
+        // Store for later use
+        currentTaskData = task;
 
         // Update task details
         document.getElementById('task-title').textContent = task.task || 'Untitled Task';
@@ -30,6 +45,15 @@ async function loadTaskDetails() {
         document.getElementById('detail-time').textContent =
             task.metrics?.execution_time_seconds ?
             `${task.metrics.execution_time_seconds.toFixed(2)}s` : '-';
+
+        // Update cost metrics
+        const totalCost = task.metrics?.cost_usd || 0;
+        const totalAgents = task.metrics?.total_agents || 0;
+        const avgCost = totalAgents > 0 ? totalCost / totalAgents : 0;
+
+        document.getElementById('detail-cost').textContent = formatCost(totalCost);
+        document.getElementById('detail-tokens').textContent = formatNumber(task.metrics?.total_tokens);
+        document.getElementById('detail-avg-cost').textContent = formatCost(avgCost);
 
         // Update result if completed
         if (task.result) {
