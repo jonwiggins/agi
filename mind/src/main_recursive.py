@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import structlog
 
-from agent import Agent
+from src.agent import Agent
 
 # Initialize structured logging
 structlog.configure(
