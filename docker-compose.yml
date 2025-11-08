@@ -14,6 +14,7 @@ services:
       MODEL_PROVIDER: ${MODEL_PROVIDER:-anthropic}
       MODEL_NAME: ${MODEL_NAME:-claude-sonnet-4-5-20250929}
       API_KEY: ${API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-${API_KEY}}
 
       # Database Connection
       DATABASE_URL: postgresql://${POSTGRES_USER:-agi}:${POSTGRES_PASSWORD:-agi_password}@database:5432/${POSTGRES_DB:-agi_memory}
@@ -24,6 +25,18 @@ services:
       MEMORY_RETENTION_DAYS: ${MEMORY_RETENTION_DAYS:-365}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
 
+      # Recursive Agent Architecture
+      MAX_TREE_DEPTH: ${MAX_TREE_DEPTH:-10}
+      MAX_AGENTS_PER_TASK: ${MAX_AGENTS_PER_TASK:-100}
+      MAX_SUBAGENTS_PER_AGENT: ${MAX_SUBAGENTS_PER_AGENT:-5}
+      AGENT_TIMEOUT_SECONDS: ${AGENT_TIMEOUT_SECONDS:-300}
+      MAX_TOOL_CALLS_PER_AGENT: ${MAX_TOOL_CALLS_PER_AGENT:-20}
+
+      # Code Execution
+      CODE_SANDBOX_ENABLED: ${CODE_SANDBOX_ENABLED:-true}
+      CODE_EXECUTION_TIMEOUT: ${CODE_EXECUTION_TIMEOUT:-30}
+      ALLOWED_LANGUAGES: ${ALLOWED_LANGUAGES:-python,javascript,bash}
+
       # Operational Settings
       LOG_LEVEL: ${LOG_LEVEL:-info}
       ENABLE_WEBSOCKET: ${ENABLE_WEBSOCKET:-true}
@@ -31,8 +44,10 @@ services:
 
       # Safety Settings
       MAX_REASONING_STEPS: ${MAX_REASONING_STEPS:-100}
+      MAX_TOOL_CALLS_PER_TASK: ${MAX_TOOL_CALLS_PER_TASK:-50}
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
-      REQUIRE_HUMAN_APPROVAL: ${REQUIRE_HUMAN_APPROVAL:-false}
+      COST_LIMIT_PER_TASK: ${COST_LIMIT_PER_TASK:-10.00}
+      ENABLE_HUMAN_REVIEW: ${ENABLE_HUMAN_REVIEW:-false}
 
     volumes:
       - ./mind/src:/app/src:ro

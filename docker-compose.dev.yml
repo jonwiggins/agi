@@ -1,0 +1,74 @@
+version: '3.8'
+
+# Development overrides for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  mind:
+    build:
+      context: ./mind
+      dockerfile: Dockerfile
+      target: development
+    
+    environment:
+      # Development settings
+      ENVIRONMENT: development
+      DEBUG: "true"
+      LOG_LEVEL: debug
+      
+      # Enable auto-reload
+      RELOAD: "true"
+    
+    volumes:
+      # Mount source code for hot-reload
+      - ./mind/src:/app/src:rw  # Read-write for development
+    
+    # Override command for hot-reload
+    command: ["python", "-m", "uvicorn", "src.main_recursive:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    
+    # Port for debugger
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # Python debugger port
+
+  database:
+    ports:
+      - "5432:5432"  # Expose for direct access
+    
+    environment:
+      # More verbose logging in dev
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    
+    # Add pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: agi_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@agi.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    networks:
+      - agi_network
+    depends_on:
+      - database
+    restart: unless-stopped
+
+  redis:
+    ports:
+      - "6379:6379"  # Expose for direct access
+    
+    # Add Redis Commander for cache inspection
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: agi_redis_commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    networks:
+      - agi_network
+    depends_on:
+      - redis
+    restart: unless-stopped
