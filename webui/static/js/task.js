@@ -11,8 +11,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     connectWebSocket();
     setupControls();
 
-    // Refresh task details every 3 seconds
-    setInterval(loadTaskDetails, 3000);
+    // Refresh task details based on status
+    startAutoRefresh();
 });
 
 function formatCost(amount) {
@@ -61,21 +61,30 @@ async function loadTaskDetails() {
             ${task.status || 'processing'}
         `;
 
-        document.getElementById('detail-status').textContent = task.status;
-        document.getElementById('detail-agents').textContent = task.metrics?.total_agents || '-';
-        document.getElementById('detail-depth').textContent = task.metrics?.max_depth || '-';
-        document.getElementById('detail-time').textContent =
-            task.metrics?.execution_time_seconds ?
-            `${task.metrics.execution_time_seconds.toFixed(2)}s` : '-';
+        // Show/hide live indicator based on status
+        const liveIndicator = document.getElementById('live-indicator');
+        if (task.status === 'processing') {
+            liveIndicator.style.display = 'inline-flex';
+        } else {
+            liveIndicator.style.display = 'none';
+        }
 
-        // Update cost metrics
+        // Update details with flash animation on change
+        updateDetailWithFlash('detail-status', task.status);
+        updateDetailWithFlash('detail-agents', task.metrics?.total_agents || '-');
+        updateDetailWithFlash('detail-depth', task.metrics?.max_depth || '-');
+        updateDetailWithFlash('detail-time',
+            task.metrics?.execution_time_seconds ?
+            `${task.metrics.execution_time_seconds.toFixed(2)}s` : '-');
+
+        // Update cost metrics with flash animation
         const totalCost = task.metrics?.cost_usd || 0;
         const totalAgents = task.metrics?.total_agents || 0;
         const avgCost = totalAgents > 0 ? totalCost / totalAgents : 0;
 
-        document.getElementById('detail-cost').textContent = formatCost(totalCost);
-        document.getElementById('detail-tokens').textContent = formatNumber(task.metrics?.total_tokens);
-        document.getElementById('detail-avg-cost').textContent = formatCost(avgCost);
+        updateDetailWithFlash('detail-cost', formatCost(totalCost));
+        updateDetailWithFlash('detail-tokens', formatNumber(task.metrics?.total_tokens));
+        updateDetailWithFlash('detail-avg-cost', formatCost(avgCost));
 
         // Show error section if task failed
         if (task.status === 'failed' || task.status === 'timeout') {
@@ -519,9 +528,65 @@ async function continueTaskBudget() {
     }
 }
 
+// Auto-refresh management
+let refreshInterval = null;
+
+function startAutoRefresh() {
+    // Clear existing interval if any
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+
+    // Set refresh interval based on task status
+    const refreshRate = getRefreshRate();
+    refreshInterval = setInterval(async () => {
+        await loadTaskDetails();
+        // Adjust refresh rate dynamically
+        const newRate = getRefreshRate();
+        if (newRate !== refreshRate) {
+            startAutoRefresh();
+        }
+    }, refreshRate);
+}
+
+function getRefreshRate() {
+    // Faster refresh for running tasks, slower for completed
+    if (!currentTaskData) return 3000;
+
+    const status = currentTaskData.status;
+    if (status === 'processing' || status === 'paused_budget') {
+        return 2000; // 2 seconds for active tasks
+    } else if (status === 'completed' || status === 'failed' || status === 'timeout') {
+        return 10000; // 10 seconds for finished tasks
+    }
+    return 3000;
+}
+
+// Helper function to update detail with flash animation
+function updateDetailWithFlash(elementId, newValue) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    const currentValue = element.textContent;
+    if (currentValue !== String(newValue)) {
+        // Value changed, flash the parent
+        const parent = element.closest('.detail-item-modern');
+        if (parent) {
+            parent.classList.remove('update-flash');
+            // Force reflow
+            void parent.offsetWidth;
+            parent.classList.add('update-flash');
+        }
+    }
+    element.textContent = newValue;
+}
+
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
     if (websocket) {
         websocket.close();
+    }
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
     }
 });

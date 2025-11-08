@@ -32,9 +32,15 @@
             </a>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
                 <h2 class="task-page-title">Task: <span id="task-title">Loading...</span></h2>
-                <div class="status-badge" id="task-status">
-                    <span class="status-indicator processing"></span>
-                    processing
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div class="live-indicator" id="live-indicator" style="display: none;">
+                        <div class="live-indicator-dot"></div>
+                        <span>LIVE</span>
+                    </div>
+                    <div class="status-badge" id="task-status">
+                        <span class="status-indicator processing"></span>
+                        processing
+                    </div>
                 </div>
             </div>
         </div>
