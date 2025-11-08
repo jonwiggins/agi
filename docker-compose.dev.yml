@@ -1,0 +1,54 @@
+version: '3.8'
+
+# Development compose file with hot-reloading and debug features
+services:
+  agi-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder  # Use builder stage for dev tools
+    container_name: agi-platform-dev
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      # Anthropic API Configuration
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+
+      # Memory Configuration
+      - CHROMA_PERSIST_DIRECTORY=/app/data/chroma
+      - MEMORY_COLLECTION_NAME=${MEMORY_COLLECTION_NAME:-agi_memories_dev}
+
+      # Agent Configuration
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-claude-sonnet-4-5-20250929}
+      - MAX_MEMORY_RESULTS=${MAX_MEMORY_RESULTS:-5}
+      - MEMORY_RELEVANCE_THRESHOLD=${MEMORY_RELEVANCE_THRESHOLD:-0.7}
+
+      # Server Configuration
+      - HOST=0.0.0.0
+      - PORT=8000
+
+      # Development settings
+      - PYTHONUNBUFFERED=1
+      - DEBUG=true
+    volumes:
+      # Mount source code for hot-reloading
+      - ./src:/app/src
+      - ./tools:/app/tools
+
+      # Persist ChromaDB data
+      - ./data/chroma:/app/data/chroma
+    command: >
+      python -m uvicorn src.server.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir /app/src
+    networks:
+      - agi-network
+    stdin_open: true
+    tty: true
+
+networks:
+  agi-network:
+    driver: bridge

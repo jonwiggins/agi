@@ -1,0 +1,87 @@
+.thought-stream-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.stream-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #333;
+}
+
+.stream-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #e0e0e0;
+}
+
+.thought-count {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.stream-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+  gap: 1rem;
+}
+
+.thought-item {
+  background: rgba(20, 20, 30, 0.6);
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.thought-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #fbbf24;
+}
+
+.thought-type {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.thought-time {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.thought-content {
+  color: #ccc;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}

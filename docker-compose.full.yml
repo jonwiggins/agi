@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Backend API with recursive agents
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agi-backend
+    restart: unless-stopped
+    environment:
+      # Anthropic API
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+
+      # Memory Configuration
+      - CHROMA_PERSIST_DIRECTORY=/app/data/chroma
+      - MEMORY_COLLECTION_NAME=${MEMORY_COLLECTION_NAME:-agi_memories}
+
+      # Agent Configuration
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-claude-sonnet-4-5-20250929}
+      - MAX_MEMORY_RESULTS=${MAX_MEMORY_RESULTS:-5}
+      - MEMORY_RELEVANCE_THRESHOLD=${MEMORY_RELEVANCE_THRESHOLD:-0.7}
+
+      # Server Configuration
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      # Persist ChromaDB data
+      - chroma-data:/app/data/chroma
+    # Change CMD to use realtime server
+    command: >
+      python -m uvicorn src.server.realtime_server:app
+      --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - agi-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  # Frontend Web UI
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agi-frontend
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - agi-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+volumes:
+  chroma-data:
+    driver: local
+
+networks:
+  agi-network:
+    driver: bridge

@@ -1,0 +1,62 @@
+.task-input-form {
+  width: 100%;
+}
+
+.input-wrapper {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.task-input {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  background: rgba(20, 20, 30, 0.8);
+  border: 2px solid #333;
+  border-radius: 12px;
+  color: #e0e0e0;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.task-input:focus {
+  outline: none;
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+}
+
+.task-input::placeholder {
+  color: #666;
+}
+
+.submit-button {
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border: none;
+  border-radius: 12px;
+  color: #000;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(251, 191, 36, 0.4);
+}
+
+.submit-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

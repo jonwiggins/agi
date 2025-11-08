@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #0a0a0a;
+  color: #e0e0e0;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* ReactFlow custom styles */
+.react-flow {
+  background-color: #111;
+}
+
+.react-flow__node {
+  border-radius: 8px;
+  padding: 12px;
+  border: 2px solid #333;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-size: 12px;
+  min-width: 200px;
+}
+
+.react-flow__node.thinking {
+  border-color: #fbbf24;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.react-flow__node.completed {
+  border-color: #10b981;
+}
+
+.react-flow__node.failed {
+  border-color: #ef4444;
+}
+
+.react-flow__node.evaluating {
+  border-color: #8b5cf6;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.react-flow__edge-path {
+  stroke: #444;
+  stroke-width: 2;
+}
+
+.react-flow__edge.active {
+  stroke: #fbbf24;
+  stroke-width: 3;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
