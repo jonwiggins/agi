@@ -54,6 +54,11 @@ class TaskCreate(BaseModel):
     max_depth: int = Field(default=5, ge=1, le=10, description="Maximum recursion depth")
     max_agents: int = Field(default=50, ge=1, le=100, description="Maximum total agents")
     timeout: int = Field(default=1800, ge=60, le=7200, description="Timeout in seconds")
+    max_cost: Optional[float] = Field(default=None, description="Maximum cost in USD (pauses when exceeded)")
+
+class BudgetExceededException(Exception):
+    """Raised when task exceeds budget"""
+    pass
 
 class TaskResponse(BaseModel):
     """Model for task response"""
@@ -116,10 +121,13 @@ async def create_task(task_create: TaskCreate):
         "max_depth": task_create.max_depth,
         "max_agents": task_create.max_agents,
         "timeout": task_create.timeout,
+        "max_cost": task_create.max_cost,
+        "budget_remaining": task_create.max_cost,  # Track remaining budget
         "status": "processing",
         "created_at": datetime.utcnow(),
         "result": None,
-        "metrics": {}
+        "metrics": {},
+        "root_agent": None  # Will store the root agent reference
     }
     
     # Start task processing in background
@@ -177,6 +185,68 @@ async def get_task(task_id: str):
         created_at=task_data["created_at"].isoformat(),
         completed_at=task_data.get("completed_at").isoformat() if task_data.get("completed_at") else None
     )
+
+@app.post("/tasks/{task_id}/continue")
+async def continue_task(task_id: str, additional_budget: float = 2.00):
+    """
+    Continue a paused task with additional budget.
+
+    This endpoint allows resuming a task that was paused due to budget exceeded.
+    The task will continue with the specified additional budget.
+    """
+    try:
+        tid = UUID(task_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    if tid not in tasks_db:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    task_data = tasks_db[tid]
+
+    # Only allow continuing paused tasks
+    if task_data["status"] != "paused_budget":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Task is not paused due to budget. Current status: {task_data['status']}"
+        )
+
+    # Validate additional budget
+    if additional_budget <= 0:
+        raise HTTPException(status_code=400, detail="Additional budget must be positive")
+    if additional_budget > 100:
+        raise HTTPException(status_code=400, detail="Additional budget cannot exceed $100")
+
+    # Update budget
+    if task_data["budget_remaining"] is None:
+        task_data["budget_remaining"] = additional_budget
+    else:
+        task_data["budget_remaining"] += additional_budget
+
+    if task_data["max_cost"] is not None:
+        task_data["max_cost"] += additional_budget
+
+    # Clear error and resume processing
+    task_data["status"] = "processing"
+    task_data["error"] = None
+
+    logger.info(
+        "task_resumed",
+        task_id=str(tid),
+        additional_budget=additional_budget,
+        new_budget=task_data["budget_remaining"]
+    )
+
+    # Restart task processing
+    asyncio.create_task(process_task(tid))
+
+    return {
+        "task_id": str(tid),
+        "status": "processing",
+        "budget_added": additional_budget,
+        "new_budget_limit": task_data["max_cost"],
+        "message": f"Task resumed with ${additional_budget:.2f} additional budget"
+    }
 
 @app.get("/tasks/{task_id}/tree")
 async def get_task_tree(task_id: str):
@@ -365,33 +435,43 @@ async def process_task(task_id: UUID):
     Process a task using the recursive agent system.
     """
     task_data = tasks_db[task_id]
-    
+
+    # Calculate total cost recursively
+    def calculate_total_cost(agent):
+        """Recursively calculate total cost including all subagents"""
+        if agent is None:
+            return 0.0
+        total = agent.cost_usd
+        for subagent in agent.subagents:
+            total += calculate_total_cost(subagent)
+        return total
+
     try:
-        # Create root agent
-        root_agent = Agent(
-            agent_id=uuid4(),
-            task_id=task_id,
-            assigned_task=task_data["task"],
-            context=task_data["context"],
-            parent_id=None,
-            depth=0,
-            max_depth=task_data["max_depth"],
-            timeout_seconds=task_data["timeout"]
-        )
-        
+        # Create or retrieve root agent
+        if task_data["root_agent"] is None:
+            root_agent = Agent(
+                agent_id=uuid4(),
+                task_id=task_id,
+                assigned_task=task_data["task"],
+                context=task_data["context"],
+                parent_id=None,
+                depth=0,
+                max_depth=task_data["max_depth"],
+                timeout_seconds=task_data["timeout"],
+                max_cost=task_data["budget_remaining"],
+                get_total_cost_fn=lambda: calculate_total_cost(task_data["root_agent"])
+            )
+            task_data["root_agent"] = root_agent
+        else:
+            root_agent = task_data["root_agent"]
+            # Update budget remaining for resume
+            root_agent.max_cost = task_data["budget_remaining"]
+
         # Execute with timeout
         result = await asyncio.wait_for(
             root_agent.solve(),
             timeout=task_data["timeout"]
         )
-        
-        # Calculate total cost recursively
-        def calculate_total_cost(agent):
-            """Recursively calculate total cost including all subagents"""
-            total = agent.cost_usd
-            for subagent in agent.subagents:
-                total += calculate_total_cost(subagent)
-            return total
 
         # Update task with results
         task_data["status"] = "completed"
@@ -426,6 +506,27 @@ async def process_task(task_id: UUID):
             "timestamp": datetime.utcnow().isoformat()
         }
         logger.error("task_timeout", task_id=str(task_id))
+
+    except BudgetExceededException as e:
+        # Task paused due to budget exceeded
+        task_data["status"] = "paused_budget"
+        task_data["agent_tree"] = root_agent.to_dict() if 'root_agent' in locals() else None
+        current_cost = calculate_total_cost(root_agent) if 'root_agent' in locals() else 0.0
+        task_data["metrics"] = {
+            "prompt_tokens": root_agent.prompt_tokens if 'root_agent' in locals() else 0,
+            "completion_tokens": root_agent.completion_tokens if 'root_agent' in locals() else 0,
+            "total_tokens": (root_agent.prompt_tokens + root_agent.completion_tokens) if 'root_agent' in locals() else 0,
+            "cost_usd": current_cost,
+            "budget_limit": task_data["max_cost"],
+            "budget_remaining": 0.0
+        }
+        task_data["error"] = {
+            "type": "BudgetExceeded",
+            "message": f"Task paused: budget of ${task_data['max_cost']:.2f} exceeded (current: ${current_cost:.4f})",
+            "timestamp": datetime.utcnow().isoformat(),
+            "requires_approval": True
+        }
+        logger.warning("task_paused_budget", task_id=str(task_id), cost=current_cost, budget=task_data["max_cost"])
 
     except Exception as e:
         import traceback

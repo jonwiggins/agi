@@ -30,6 +30,8 @@ class Agent:
         depth: int = 0,
         max_depth: int = 10,
         timeout_seconds: int = 300,
+        max_cost: Optional[float] = None,
+        get_total_cost_fn: Optional[callable] = None,
     ):
         self.agent_id = agent_id
         self.task_id = task_id
@@ -39,6 +41,8 @@ class Agent:
         self.depth = depth
         self.max_depth = max_depth
         self.timeout_seconds = timeout_seconds
+        self.max_cost = max_cost
+        self.get_total_cost_fn = get_total_cost_fn
 
         # State
         self.status = "created"
@@ -89,6 +93,18 @@ class Agent:
         output_cost = (output_tokens / 1_000_000) * model_pricing["output"]
 
         return input_cost + output_cost
+
+    def _check_budget(self):
+        """Check if we've exceeded the budget and raise exception if so"""
+        if self.max_cost is None or self.get_total_cost_fn is None:
+            return  # No budget limit set
+
+        total_cost = self.get_total_cost_fn()
+        if total_cost >= self.max_cost:
+            from main_recursive import BudgetExceededException
+            raise BudgetExceededException(
+                f"Task exceeded budget: ${total_cost:.4f} >= ${self.max_cost:.2f}"
+            )
 
     async def solve(self) -> Dict[str, Any]:
         """
@@ -156,23 +172,40 @@ class Agent:
             return {"approach": "direct"}
 
         # Ask Claude to analyze and decide
-        prompt = f"""You are an AGI agent analyzing a task to determine the best approach.
+        prompt = f"""You are an AGI agent analyzing a task. Choose the RIGHT approach:
 
 Task: {self.assigned_task}
 
-Context:
-{self.context}
+Context: {self.context}
 
 Current depth: {self.depth}/{self.max_depth}
 
-Decide:
-1. Can this task be solved DIRECTLY using available tools? (web_search, db_query, execute_code, store_data)
-2. Or should it be DECOMPOSED into smaller subtasks?
+**CRITICAL DECISION RULES:**
 
-If DIRECT, respond with: {{"approach": "direct", "reasoning": "why"}}
-If DECOMPOSE, respond with: {{"approach": "decompose", "subtasks": ["task1", "task2", ...], "reasoning": "why"}}
+Choose DIRECT if:
+- This is a SINGLE, focused task that can be answered or completed in one step
+- You can solve it using available tools (web_search, db_query, execute_code, store_data)
+- The task is straightforward (answer a question, lookup data, run code, etc.)
+- There's NO clear way to break it into MULTIPLE independent subtasks
 
-Be concise. Only decompose if the task is genuinely complex."""
+Choose DECOMPOSE ONLY if:
+- The task REQUIRES multiple DIFFERENT steps that build on each other
+- You can identify 2+ DISTINCT subtasks that together solve the main task
+- Each subtask is meaningfully different and necessary
+- The task is genuinely complex (e.g., "design a system", "create a plan", "analyze multiple aspects")
+
+**EXAMPLES:**
+- "What is 2+2?" → DIRECT (single calculation)
+- "Explain recursion" → DIRECT (single explanation)
+- "Search for Python tutorials" → DIRECT (single search)
+- "Design a scalable e-commerce system with payment processing, inventory, and user management" → DECOMPOSE (multiple systems)
+- "Create a comprehensive business plan including market analysis, financial projections, and marketing strategy" → DECOMPOSE (distinct sections)
+
+**RESPOND:**
+If DIRECT: {{"approach": "direct", "reasoning": "brief reason"}}
+If DECOMPOSE: {{"approach": "decompose", "subtasks": ["specific task 1", "specific task 2", ...], "reasoning": "why multiple tasks needed"}}
+
+Default to DIRECT unless decomposition is clearly necessary."""
 
         response = self.client.messages.create(
             model=self.model,
@@ -186,6 +219,7 @@ Be concise. Only decompose if the task is genuinely complex."""
             response.usage.input_tokens,
             response.usage.output_tokens
         )
+        self._check_budget()  # Check if budget exceeded
 
         # Parse response (simplified - in production use structured output)
         content = response.content[0].text
@@ -245,6 +279,7 @@ Use tools as needed and provide a final answer."""
                 response.usage.input_tokens,
                 response.usage.output_tokens
             )
+            self._check_budget()  # Check if budget exceeded
 
             # Check if we're done
             if response.stop_reason == "end_turn":
@@ -299,7 +334,9 @@ Use tools as needed and provide a final answer."""
                 parent_id=self.agent_id,
                 depth=self.depth + 1,
                 max_depth=self.max_depth,
-                timeout_seconds=self.timeout_seconds
+                timeout_seconds=self.timeout_seconds,
+                max_cost=self.max_cost,
+                get_total_cost_fn=self.get_total_cost_fn
             )
 
             self.subagents.append(subagent)
@@ -362,6 +399,7 @@ Respond with JSON: {{"decision": "accept/reject/revise", "score": 0.0-1.0, "reas
             response.usage.input_tokens,
             response.usage.output_tokens
         )
+        self._check_budget()  # Check if budget exceeded
 
         content = response.content[0].text
 
@@ -402,6 +440,7 @@ Subtasks and results:
             response.usage.input_tokens,
             response.usage.output_tokens
         )
+        self._check_budget()  # Check if budget exceeded
 
         synthesis = response.content[0].text
         self.synthesis = synthesis

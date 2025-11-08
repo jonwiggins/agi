@@ -74,6 +74,26 @@ async function loadTaskDetails() {
             document.getElementById('error-section').style.display = 'none';
         }
 
+        // Show budget pause section if budget exceeded
+        if (task.status === 'paused_budget') {
+            const budgetSection = document.getElementById('budget-pause-section');
+            budgetSection.style.display = 'block';
+
+            if (task.error && task.error.message) {
+                document.getElementById('budget-pause-message').textContent = task.error.message;
+            }
+
+            const currentCost = task.metrics?.cost_usd || 0;
+            const budgetLimit = task.metrics?.budget_limit || 0;
+            document.getElementById('budget-current-cost').textContent = formatCost(currentCost);
+            document.getElementById('budget-limit').textContent = formatCost(budgetLimit);
+        } else {
+            const budgetSection = document.getElementById('budget-pause-section');
+            if (budgetSection) {
+                budgetSection.style.display = 'none';
+            }
+        }
+
         // Update result if completed
         if (task.result) {
             const resultBox = document.getElementById('task-result');
@@ -396,6 +416,53 @@ function setupControls() {
     document.getElementById('fit-view').onclick = () => {
         network.fit({ animation: true });
     };
+
+    // Budget continue button
+    const continueBtn = document.getElementById('continue-budget-btn');
+    if (continueBtn) {
+        continueBtn.onclick = async () => {
+            await continueTaskBudget();
+        };
+    }
+}
+
+async function continueTaskBudget() {
+    const continueBtn = document.getElementById('continue-budget-btn');
+    if (!continueBtn) return;
+
+    try {
+        // Disable button and show loading state
+        continueBtn.disabled = true;
+        const originalText = continueBtn.textContent;
+        continueBtn.textContent = 'Continuing...';
+
+        const response = await fetch(`/api/tasks/${TASK_ID}/continue`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ additional_budget: 2.00 })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to continue task');
+        }
+
+        const result = await response.json();
+        console.log('Task resumed:', result);
+
+        // Reload task details to update UI
+        await loadTaskDetails();
+
+    } catch (error) {
+        console.error('Error continuing task:', error);
+        alert('Failed to continue task: ' + error.message);
+
+        // Re-enable button on error
+        continueBtn.disabled = false;
+        continueBtn.textContent = 'Continue for $2 more';
+    }
 }
 
 // Cleanup on page unload

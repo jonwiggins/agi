@@ -90,6 +90,8 @@ function setupNewTaskModal() {
     form.onsubmit = async (e) => {
         e.preventDefault();
 
+        const maxCostValue = document.getElementById('max-cost').value;
+
         const taskData = {
             task: document.getElementById('task-description').value,
             context: {
@@ -99,6 +101,11 @@ function setupNewTaskModal() {
             max_agents: parseInt(document.getElementById('max-agents').value),
             timeout: 1800
         };
+
+        // Only add max_cost if value is provided
+        if (maxCostValue && maxCostValue.trim() !== '') {
+            taskData.max_cost = parseFloat(maxCostValue);
+        }
 
         try {
             const response = await fetch('/api/tasks', {
