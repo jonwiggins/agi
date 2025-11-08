@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task {{ task_id }} - AGI Platform</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" style="text-decoration: none;">
+                <h1 class="logo">🧠 AGI Platform</h1>
+            </a>
+            <div class="nav-links">
+                <a href="/">Dashboard</a>
+                <a href="/memories">Memories</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <div>
+                <a href="/" class="back-link">← Back to Dashboard</a>
+                <h2>Task: <span id="task-title">Loading...</span></h2>
+            </div>
+            <div class="status-badge" id="task-status">processing</div>
+        </div>
+
+        <div class="grid-2">
+            <!-- Left: Tree Visualization -->
+            <div class="section">
+                <div class="section-header">
+                    <h3>Agent Tree</h3>
+                    <div class="tree-controls">
+                        <button id="zoom-in" class="btn-icon" title="Zoom In">+</button>
+                        <button id="zoom-out" class="btn-icon" title="Zoom Out">−</button>
+                        <button id="fit-view" class="btn-icon" title="Fit View">⊡</button>
+                    </div>
+                </div>
+                <div id="tree-container"></div>
+                <div class="legend">
+                    <div class="legend-item"><span class="legend-dot running"></span> Running</div>
+                    <div class="legend-item"><span class="legend-dot completed"></span> Completed</div>
+                    <div class="legend-item"><span class="legend-dot failed"></span> Failed</div>
+                    <div class="legend-item"><span class="legend-dot timeout"></span> Timeout</div>
+                    <div class="legend-item"><span class="legend-dot waiting"></span> Waiting</div>
+                </div>
+            </div>
+
+            <!-- Right: Task Info & Agent Details -->
+            <div>
+                <div class="section">
+                    <h3>Task Details</h3>
+                    <div id="task-details" class="details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Task ID:</span>
+                            <span id="detail-id">{{ task_id }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Status:</span>
+                            <span id="detail-status">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Total Agents:</span>
+                            <span id="detail-agents">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Max Depth:</span>
+                            <span id="detail-depth">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Execution Time:</span>
+                            <span id="detail-time">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Total Cost:</span>
+                            <span id="detail-cost" class="cost-value">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Total Tokens:</span>
+                            <span id="detail-tokens">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Avg Cost/Agent:</span>
+                            <span id="detail-avg-cost" class="cost-value">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>Selected Agent</h3>
+                    <div id="agent-details">
+                        <p class="empty-state">Click on a node to view agent details</p>
+                    </div>
+                </div>
+
+                <div class="section" id="error-section" style="display: none;">
+                    <h3>Error Details</h3>
+                    <div class="error-box">
+                        <div class="error-type" id="error-type"></div>
+                        <div class="error-message" id="error-message"></div>
+                        <div class="error-timestamp" id="error-timestamp"></div>
+                        <details class="error-traceback">
+                            <summary>Stack Trace</summary>
+                            <pre id="error-traceback"></pre>
+                        </details>
+                    </div>
+                </div>
+
+                <div class="section" id="budget-pause-section" style="display: none;">
+                    <h3>⚠️ Budget Exceeded</h3>
+                    <div class="budget-pause-box">
+                        <div class="budget-pause-message" id="budget-pause-message">
+                            Task paused due to budget exceeded
+                        </div>
+                        <div class="budget-info">
+                            <div class="budget-stat">
+                                <span class="budget-label">Current Cost:</span>
+                                <span class="cost-value" id="budget-current-cost">$0.00</span>
+                            </div>
+                            <div class="budget-stat">
+                                <span class="budget-label">Budget Limit:</span>
+                                <span class="cost-value" id="budget-limit">$0.00</span>
+                            </div>
+                        </div>
+                        <div class="budget-actions">
+                            <button id="continue-budget-btn" class="btn-primary">
+                                Continue for $2 more
+                            </button>
+                            <p class="budget-help-text">
+                                The task will resume with an additional $2.00 budget.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>Result</h3>
+                    <div id="task-result" class="result-box">
+                        <div class="loading">Waiting for results...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TASK_ID = "{{ task_id }}";
+    </script>
+    <script src="/static/js/task.js"></script>
+</body>
+</html>

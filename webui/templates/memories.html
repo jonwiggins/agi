@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memories - AGI Platform</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" style="text-decoration: none;">
+                <h1 class="logo">🧠 AGI Platform</h1>
+            </a>
+            <div class="nav-links">
+                <a href="/">Dashboard</a>
+                <a href="/memories" class="active">Memories</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h2>Knowledge & Memory Store</h2>
+        </div>
+
+        <div class="section">
+            <div class="search-bar">
+                <input type="text" id="memory-search" placeholder="Search memories...">
+                <button class="btn btn-primary">Search</button>
+            </div>
+
+            <div class="filter-tabs">
+                <button class="tab active" data-category="all">All</button>
+                <button class="tab" data-category="knowledge">Knowledge</button>
+                <button class="tab" data-category="patterns">Patterns</button>
+                <button class="tab" data-category="experiences">Experiences</button>
+            </div>
+
+            <div id="memories-container" class="memories-list">
+                <div class="memory-card">
+                    <div class="memory-header">
+                        <span class="memory-category">Knowledge</span>
+                        <span class="memory-date">2 hours ago</span>
+                    </div>
+                    <div class="memory-content">
+                        <h4>Successful Pattern: REST API Design</h4>
+                        <p>When designing REST APIs, decompose into: endpoint design, data models, error handling, and authentication.</p>
+                    </div>
+                    <div class="memory-meta">
+                        <span>Usefulness: ⭐⭐⭐⭐⭐</span>
+                        <span>Used 12 times</span>
+                    </div>
+                </div>
+
+                <div class="memory-card">
+                    <div class="memory-header">
+                        <span class="memory-category pattern">Pattern</span>
+                        <span class="memory-date">1 day ago</span>
+                    </div>
+                    <div class="memory-content">
+                        <h4>Task Decomposition Strategy</h4>
+                        <p>For complex implementation tasks: (1) Research approach, (2) Design architecture, (3) Implement components, (4) Test and integrate.</p>
+                    </div>
+                    <div class="memory-meta">
+                        <span>Success Rate: 85%</span>
+                        <span>Applied 7 times</span>
+                    </div>
+                </div>
+
+                <div class="memory-card">
+                    <div class="memory-header">
+                        <span class="memory-category experience">Experience</span>
+                        <span class="memory-date">3 days ago</span>
+                    </div>
+                    <div class="memory-content">
+                        <h4>Code Execution Insight</h4>
+                        <p>Python code execution works best with explicit error handling and timeout settings of 30s.</p>
+                    </div>
+                    <div class="memory-meta">
+                        <span>Confidence: 0.92</span>
+                        <span>From Task: abc-123</span>
+                    </div>
+                </div>
+
+                <div class="empty-state" style="display: none;">
+                    <p>No memories found</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/memories.js"></script>
+</body>
+</html>
