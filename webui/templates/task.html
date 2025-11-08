@@ -21,28 +21,37 @@
         </div>
     </nav>
 
-    <div class="container">
-        <div class="header">
-            <div>
-                <a href="/" class="back-link">← Back to Dashboard</a>
-                <h2>Task: <span id="task-title">Loading...</span></h2>
+    <div class="container page-enter">
+        <!-- Task Header -->
+        <div class="task-page-header">
+            <a href="/" class="back-link">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline; vertical-align: middle; margin-right: 0.5rem;">
+                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Back to Dashboard
+            </a>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                <h2 class="task-page-title">Task: <span id="task-title">Loading...</span></h2>
+                <div class="status-badge" id="task-status">
+                    <span class="status-indicator processing"></span>
+                    processing
+                </div>
             </div>
-            <div class="status-badge" id="task-status">processing</div>
         </div>
 
         <div class="grid-2">
             <!-- Left: Tree Visualization -->
-            <div class="section">
-                <div class="section-header">
+            <div class="tree-section">
+                <div class="tree-section-header">
                     <h3>Agent Tree</h3>
                     <div class="tree-controls">
-                        <button id="zoom-in" class="btn-icon" title="Zoom In">+</button>
-                        <button id="zoom-out" class="btn-icon" title="Zoom Out">−</button>
-                        <button id="fit-view" class="btn-icon" title="Fit View">⊡</button>
+                        <button id="zoom-in" class="icon-btn" title="Zoom In">+</button>
+                        <button id="zoom-out" class="icon-btn" title="Zoom Out">−</button>
+                        <button id="fit-view" class="icon-btn" title="Fit View">⊡</button>
                     </div>
                 </div>
                 <div id="tree-container"></div>
-                <div class="legend">
+                <div class="legend" style="margin-top: 1rem;">
                     <div class="legend-item"><span class="legend-dot running"></span> Running</div>
                     <div class="legend-item"><span class="legend-dot completed"></span> Completed</div>
                     <div class="legend-item"><span class="legend-dot failed"></span> Failed</div>
@@ -53,55 +62,66 @@
 
             <!-- Right: Task Info & Agent Details -->
             <div>
-                <div class="section">
+                <div class="agent-details-section">
                     <h3>Task Details</h3>
-                    <div id="task-details" class="details-grid">
-                        <div class="detail-item">
+                    <div id="task-details">
+                        <div class="detail-item-modern">
                             <span class="detail-label">Task ID:</span>
-                            <span id="detail-id">{{ task_id }}</span>
+                            <span class="detail-value" id="detail-id">{{ task_id }}</span>
                         </div>
-                        <div class="detail-item">
+                        <div class="detail-item-modern">
                             <span class="detail-label">Status:</span>
-                            <span id="detail-status">-</span>
+                            <span class="detail-value" id="detail-status">-</span>
                         </div>
-                        <div class="detail-item">
+                        <div class="detail-item-modern">
                             <span class="detail-label">Total Agents:</span>
-                            <span id="detail-agents">-</span>
+                            <span class="detail-value" id="detail-agents">-</span>
                         </div>
-                        <div class="detail-item">
+                        <div class="detail-item-modern">
                             <span class="detail-label">Max Depth:</span>
-                            <span id="detail-depth">-</span>
+                            <span class="detail-value" id="detail-depth">-</span>
                         </div>
-                        <div class="detail-item">
+                        <div class="detail-item-modern">
                             <span class="detail-label">Execution Time:</span>
-                            <span id="detail-time">-</span>
+                            <span class="detail-value" id="detail-time">-</span>
                         </div>
-                        <div class="detail-item">
+                        <div class="detail-item-modern">
                             <span class="detail-label">Total Cost:</span>
-                            <span id="detail-cost" class="cost-value">-</span>
+                            <span class="detail-value cost-value" id="detail-cost">-</span>
                         </div>
-                        <div class="detail-item">
+                        <div class="detail-item-modern">
                             <span class="detail-label">Total Tokens:</span>
-                            <span id="detail-tokens">-</span>
+                            <span class="detail-value" id="detail-tokens">-</span>
                         </div>
-                        <div class="detail-item">
+                        <div class="detail-item-modern">
                             <span class="detail-label">Avg Cost/Agent:</span>
-                            <span id="detail-avg-cost" class="cost-value">-</span>
+                            <span class="detail-value cost-value" id="detail-avg-cost">-</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="section">
+                <div class="agent-details-section">
                     <h3>Selected Agent</h3>
                     <div id="agent-details">
-                        <p class="empty-state">Click on a node to view agent details</p>
+                        <div class="empty-state-dashboard" style="padding: 2rem; border: none;">
+                            <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="40" cy="40" r="30" stroke="#E5E7EB" stroke-width="3"/>
+                                <path d="M40 25V40L50 45" stroke="#E5E7EB" stroke-width="3" stroke-linecap="round"/>
+                            </svg>
+                            <p style="margin-top: 1rem; margin-bottom: 0;">Click on a node to view agent details</p>
+                        </div>
                     </div>
                 </div>
 
-                <div class="section" id="error-section" style="display: none;">
+                <div class="agent-details-section" id="error-section" style="display: none;">
                     <h3>Error Details</h3>
-                    <div class="error-box">
-                        <div class="error-type" id="error-type"></div>
+                    <div class="error-box-modern">
+                        <div class="error-type" id="error-type">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 8V12M12 16H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span id="error-type-text"></span>
+                        </div>
                         <div class="error-message" id="error-message"></div>
                         <div class="error-timestamp" id="error-timestamp"></div>
                         <details class="error-traceback">
@@ -111,9 +131,14 @@
                     </div>
                 </div>
 
-                <div class="section" id="budget-pause-section" style="display: none;">
-                    <h3>⚠️ Budget Exceeded</h3>
-                    <div class="budget-pause-box">
+                <div class="agent-details-section" id="budget-pause-section" style="display: none;">
+                    <h3>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline; vertical-align: middle; margin-right: 0.5rem;">
+                            <path d="M12 8V12M12 16H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Budget Exceeded
+                    </h3>
+                    <div class="budget-pause-box-modern">
                         <div class="budget-pause-message" id="budget-pause-message">
                             Task paused due to budget exceeded
                         </div>
@@ -128,7 +153,10 @@
                             </div>
                         </div>
                         <div class="budget-actions">
-                            <button id="continue-budget-btn" class="btn-primary">
+                            <button id="continue-budget-btn" class="btn btn-primary add-memory-btn">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M8 1V15M1 8H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
                                 Continue for $2 more
                             </button>
                             <p class="budget-help-text">
@@ -138,10 +166,13 @@
                     </div>
                 </div>
 
-                <div class="section">
+                <div class="agent-details-section">
                     <h3>Result</h3>
-                    <div id="task-result" class="result-box">
-                        <div class="loading">Waiting for results...</div>
+                    <div id="task-result" class="result-box-modern">
+                        <div class="loading-state" style="padding: 2rem;">
+                            <div class="loading-spinner"></div>
+                            <p>Waiting for results...</p>
+                        </div>
                     </div>
                 </div>
             </div>
