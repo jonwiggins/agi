@@ -6,13 +6,14 @@ let currentTaskData = null;
 
 // Load task data on page load
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadTaskDetails();
+    // Immediately start loading task details
+    loadTaskDetails(); // Don't await - let it load in parallel
     initializeTree();
     connectWebSocket();
     setupControls();
 
-    // Refresh task details every 3 seconds
-    setInterval(loadTaskDetails, 3000);
+    // Start auto-refresh immediately (will wait for first load to complete via currentTaskData check)
+    startAutoRefresh();
 });
 
 function formatCost(amount) {
@@ -29,31 +30,62 @@ function formatNumber(num) {
 async function loadTaskDetails() {
     try {
         const response = await fetch(`/api/tasks/${TASK_ID}`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const task = await response.json();
+
+        // Handle error response from backend
+        if (task.error) {
+            console.error('API Error:', task.error);
+            document.getElementById('task-title').textContent = 'Error loading task';
+            document.getElementById('task-status').textContent = 'error';
+            document.getElementById('task-status').className = 'status-badge failed';
+            return;
+        }
 
         // Store for later use
         currentTaskData = task;
 
         // Update task details
-        document.getElementById('task-title').textContent = task.context?.title || task.task || 'Untitled Task';
-        document.getElementById('task-status').textContent = task.status;
-        document.getElementById('task-status').className = `status-badge ${task.status}`;
+        const taskTitle = task.context?.title || task.task || 'Untitled Task';
+        document.getElementById('task-title').textContent = taskTitle;
 
-        document.getElementById('detail-status').textContent = task.status;
-        document.getElementById('detail-agents').textContent = task.metrics?.total_agents || '-';
-        document.getElementById('detail-depth').textContent = task.metrics?.max_depth || '-';
-        document.getElementById('detail-time').textContent =
+        // Update status badge with indicator
+        const statusBadge = document.getElementById('task-status');
+        const statusClass = task.status || 'processing';
+        statusBadge.className = `status-badge ${statusClass}`;
+        statusBadge.innerHTML = `
+            <span class="status-indicator ${statusClass}"></span>
+            ${task.status || 'processing'}
+        `;
+
+        // Show/hide live indicator based on status
+        const liveIndicator = document.getElementById('live-indicator');
+        if (task.status === 'processing') {
+            liveIndicator.style.display = 'inline-flex';
+        } else {
+            liveIndicator.style.display = 'none';
+        }
+
+        // Update details with flash animation on change
+        updateDetailWithFlash('detail-status', task.status);
+        updateDetailWithFlash('detail-agents', task.metrics?.total_agents || '-');
+        updateDetailWithFlash('detail-depth', task.metrics?.max_depth || '-');
+        updateDetailWithFlash('detail-time',
             task.metrics?.execution_time_seconds ?
-            `${task.metrics.execution_time_seconds.toFixed(2)}s` : '-';
+            `${task.metrics.execution_time_seconds.toFixed(2)}s` : '-');
 
-        // Update cost metrics
+        // Update cost metrics with flash animation
         const totalCost = task.metrics?.cost_usd || 0;
         const totalAgents = task.metrics?.total_agents || 0;
         const avgCost = totalAgents > 0 ? totalCost / totalAgents : 0;
 
-        document.getElementById('detail-cost').textContent = formatCost(totalCost);
-        document.getElementById('detail-tokens').textContent = formatNumber(task.metrics?.total_tokens);
-        document.getElementById('detail-avg-cost').textContent = formatCost(avgCost);
+        updateDetailWithFlash('detail-cost', formatCost(totalCost));
+        updateDetailWithFlash('detail-tokens', formatNumber(task.metrics?.total_tokens));
+        updateDetailWithFlash('detail-avg-cost', formatCost(avgCost));
 
         // Show error section if task failed
         if (task.status === 'failed' || task.status === 'timeout') {
@@ -61,7 +93,7 @@ async function loadTaskDetails() {
             errorSection.style.display = 'block';
 
             if (task.error) {
-                document.getElementById('error-type').textContent = task.error.type || 'Error';
+                document.getElementById('error-type-text').textContent = task.error.type || 'Error';
                 document.getElementById('error-message').textContent = task.error.message || 'Unknown error';
                 document.getElementById('error-timestamp').textContent =
                     `Occurred at: ${new Date(task.error.timestamp).toLocaleString()}`;
@@ -97,7 +129,12 @@ async function loadTaskDetails() {
         // Update result if completed
         if (task.result) {
             const resultBox = document.getElementById('task-result');
+            resultBox.className = 'result-box-modern';
             resultBox.innerHTML = `<pre>${JSON.stringify(task.result, null, 2)}</pre>`;
+        } else if (task.status === 'completed') {
+            const resultBox = document.getElementById('task-result');
+            resultBox.className = 'result-box-modern';
+            resultBox.innerHTML = `<p style="color: #9ca3af;">No result data available</p>`;
         }
 
         // Load and update tree
@@ -269,11 +306,22 @@ function getNodeColor(status) {
 async function showAgentDetails(nodeId) {
     try {
         const response = await fetch(`/api/tasks/${TASK_ID}/agents/${nodeId}`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const agent = await response.json();
 
-        if (agent.error) {
+        if (agent.error || !agent.agent_id) {
             document.getElementById('agent-details').innerHTML = `
-                <p class="empty-state">Unable to load agent details</p>
+                <div class="empty-state-dashboard" style="padding: 2rem; border: none;">
+                    <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="40" cy="40" r="30" stroke="#E5E7EB" stroke-width="3"/>
+                        <path d="M40 20V40M40 50H40.01" stroke="#E5E7EB" stroke-width="3" stroke-linecap="round"/>
+                    </svg>
+                    <p style="margin-top: 1rem; margin-bottom: 0;">Unable to load agent details</p>
+                </div>
             `;
             return;
         }
@@ -283,20 +331,25 @@ async function showAgentDetails(nodeId) {
         if (agent.tool_calls && agent.tool_calls.length > 0) {
             toolCallsHtml = `
                 <div class="mt-2">
-                    <strong>Tool Calls (${agent.tool_calls.length}):</strong>
+                    <strong style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M14 7L8 13L4 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Tool Calls (${agent.tool_calls.length})
+                    </strong>
                     ${agent.tool_calls.map(tc => `
                         <div class="tool-call-item">
                             <div class="tool-call-header">
-                                <span class="tool-name">${tc.tool}</span>
-                                <span class="tool-time">${new Date(tc.timestamp).toLocaleTimeString()}</span>
+                                <span class="tool-name">${tc.tool || 'Unknown'}</span>
+                                <span class="tool-time">${tc.timestamp ? new Date(tc.timestamp).toLocaleTimeString() : 'N/A'}</span>
                             </div>
                             <details class="tool-call-details">
                                 <summary>Parameters & Result</summary>
                                 <div class="tool-call-content">
                                     <strong>Input:</strong>
-                                    <pre>${JSON.stringify(tc.input, null, 2)}</pre>
+                                    <pre>${JSON.stringify(tc.input || {}, null, 2)}</pre>
                                     <strong>Output:</strong>
-                                    <pre>${JSON.stringify(tc.result, null, 2)}</pre>
+                                    <pre>${JSON.stringify(tc.result || {}, null, 2)}</pre>
                                 </div>
                             </details>
                         </div>
@@ -306,46 +359,51 @@ async function showAgentDetails(nodeId) {
         }
 
         const detailsHtml = `
-            <div class="details-grid">
-                <div class="detail-item">
+            <div>
+                <div class="detail-item-modern">
                     <span class="detail-label">Agent ID:</span>
-                    <span title="${agent.agent_id}">${agent.agent_id.substring(0, 8)}...</span>
+                    <span class="detail-value" title="${agent.agent_id || 'N/A'}">${agent.agent_id ? agent.agent_id.substring(0, 8) + '...' : 'N/A'}</span>
                 </div>
-                <div class="detail-item">
+                <div class="detail-item-modern">
                     <span class="detail-label">Status:</span>
-                    <span class="status-badge ${agent.status}">${agent.status}</span>
+                    <span class="status-badge ${agent.status || 'unknown'}">
+                        <span class="status-indicator ${agent.status || 'unknown'}"></span>
+                        ${agent.status || 'unknown'}
+                    </span>
                 </div>
-                <div class="detail-item">
+                <div class="detail-item-modern">
                     <span class="detail-label">Depth:</span>
-                    <span>${agent.depth}</span>
+                    <span class="detail-value">${agent.depth !== undefined ? agent.depth : 'N/A'}</span>
                 </div>
-                <div class="detail-item">
+                <div class="detail-item-modern">
                     <span class="detail-label">Tool Calls:</span>
-                    <span>${agent.tool_calls ? agent.tool_calls.length : 0}</span>
+                    <span class="detail-value">${agent.tool_calls ? agent.tool_calls.length : 0}</span>
                 </div>
-                <div class="detail-item">
+                <div class="detail-item-modern">
                     <span class="detail-label">Cost:</span>
-                    <span class="cost-value">${formatCost(agent.metrics?.cost_usd || 0)}</span>
+                    <span class="detail-value cost-value">${formatCost(agent.metrics?.cost_usd || 0)}</span>
                 </div>
-                <div class="detail-item">
+                <div class="detail-item-modern">
                     <span class="detail-label">Tokens:</span>
-                    <span>${formatNumber((agent.metrics?.prompt_tokens || 0) + (agent.metrics?.completion_tokens || 0))}</span>
+                    <span class="detail-value">${formatNumber((agent.metrics?.prompt_tokens || 0) + (agent.metrics?.completion_tokens || 0))}</span>
                 </div>
             </div>
             <div class="mt-2">
-                <strong>Task:</strong>
-                <p>${agent.assigned_task}</p>
+                <strong style="display: block; margin-bottom: 0.5rem; color: var(--dark);">Task:</strong>
+                <p style="color: var(--gray); line-height: 1.6;">${agent.assigned_task || 'No task description available'}</p>
             </div>
             ${agent.thoughts ? `
                 <div class="mt-2">
-                    <strong>Thoughts:</strong>
-                    <p>${agent.thoughts}</p>
+                    <strong style="display: block; margin-bottom: 0.5rem; color: var(--dark);">Thoughts:</strong>
+                    <p style="color: var(--gray); line-height: 1.6;">${agent.thoughts}</p>
                 </div>
             ` : ''}
             ${agent.result ? `
                 <div class="mt-2">
-                    <strong>Result:</strong>
-                    <pre>${JSON.stringify(agent.result, null, 2)}</pre>
+                    <strong style="display: block; margin-bottom: 0.5rem; color: var(--dark);">Result:</strong>
+                    <div class="result-box-modern" style="max-height: 300px;">
+                        <pre>${JSON.stringify(agent.result, null, 2)}</pre>
+                    </div>
                 </div>
             ` : ''}
             ${toolCallsHtml}
@@ -355,7 +413,13 @@ async function showAgentDetails(nodeId) {
     } catch (error) {
         console.error('Error loading agent details:', error);
         document.getElementById('agent-details').innerHTML = `
-            <p class="empty-state">Error loading agent details</p>
+            <div class="empty-state-dashboard" style="padding: 2rem; border: none;">
+                <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="40" cy="40" r="30" stroke="#E5E7EB" stroke-width="3"/>
+                    <path d="M40 20V40M40 50H40.01" stroke="#E5E7EB" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+                <p style="margin-top: 1rem; margin-bottom: 0;">Error loading agent details</p>
+            </div>
         `;
     }
 }
@@ -403,19 +467,35 @@ function connectWebSocket() {
 }
 
 function setupControls() {
-    document.getElementById('zoom-in').onclick = () => {
-        const scale = network.getScale();
-        network.moveTo({ scale: scale * 1.2 });
-    };
+    const zoomInBtn = document.getElementById('zoom-in');
+    const zoomOutBtn = document.getElementById('zoom-out');
+    const fitViewBtn = document.getElementById('fit-view');
 
-    document.getElementById('zoom-out').onclick = () => {
-        const scale = network.getScale();
-        network.moveTo({ scale: scale * 0.8 });
-    };
+    if (zoomInBtn) {
+        zoomInBtn.onclick = () => {
+            if (network) {
+                const scale = network.getScale();
+                network.moveTo({ scale: scale * 1.2 });
+            }
+        };
+    }
 
-    document.getElementById('fit-view').onclick = () => {
-        network.fit({ animation: true });
-    };
+    if (zoomOutBtn) {
+        zoomOutBtn.onclick = () => {
+            if (network) {
+                const scale = network.getScale();
+                network.moveTo({ scale: scale * 0.8 });
+            }
+        };
+    }
+
+    if (fitViewBtn) {
+        fitViewBtn.onclick = () => {
+            if (network) {
+                network.fit({ animation: true });
+            }
+        };
+    }
 
     // Budget continue button
     const continueBtn = document.getElementById('continue-budget-btn');
@@ -465,9 +545,65 @@ async function continueTaskBudget() {
     }
 }
 
+// Auto-refresh management
+let refreshInterval = null;
+
+function startAutoRefresh() {
+    // Clear existing interval if any
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+
+    // Set refresh interval based on task status
+    const refreshRate = getRefreshRate();
+    refreshInterval = setInterval(async () => {
+        await loadTaskDetails();
+        // Adjust refresh rate dynamically
+        const newRate = getRefreshRate();
+        if (newRate !== refreshRate) {
+            startAutoRefresh();
+        }
+    }, refreshRate);
+}
+
+function getRefreshRate() {
+    // Faster refresh for running tasks, slower for completed
+    if (!currentTaskData) return 3000;
+
+    const status = currentTaskData.status;
+    if (status === 'processing' || status === 'paused_budget') {
+        return 2000; // 2 seconds for active tasks
+    } else if (status === 'completed' || status === 'failed' || status === 'timeout') {
+        return 10000; // 10 seconds for finished tasks
+    }
+    return 3000;
+}
+
+// Helper function to update detail with flash animation
+function updateDetailWithFlash(elementId, newValue) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    const currentValue = element.textContent;
+    if (currentValue !== String(newValue)) {
+        // Value changed, flash the parent
+        const parent = element.closest('.detail-item-modern');
+        if (parent) {
+            parent.classList.remove('update-flash');
+            // Force reflow
+            void parent.offsetWidth;
+            parent.classList.add('update-flash');
+        }
+    }
+    element.textContent = newValue;
+}
+
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
     if (websocket) {
         websocket.close();
+    }
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
     }
 });

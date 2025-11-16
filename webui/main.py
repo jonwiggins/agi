@@ -67,27 +67,45 @@ async def stats():
     """Get system stats"""
     try:
         response = await http_client.get("/stats")
-        return response.json()
+        if response.status_code == 200:
+            return response.json()
+        else:
+            # Return default stats if backend unavailable
+            return {
+                "tasks": {"total": 0, "completed": 0, "processing": 0, "failed": 0},
+                "costs": {"total_usd": 0.0, "average_per_task_usd": 0.0}
+            }
     except Exception as e:
-        return {"error": str(e)}
+        # Return default stats if backend unavailable
+        return {
+            "tasks": {"total": 0, "completed": 0, "processing": 0, "failed": 0},
+            "costs": {"total_usd": 0.0, "average_per_task_usd": 0.0}
+        }
 
 @app.get("/api/tasks")
 async def list_tasks():
     """List all tasks"""
     try:
         response = await http_client.get("/tasks")
-        return response.json()
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return []
     except Exception as e:
-        return {"error": str(e), "tasks": []}
+        # Return empty array if backend unavailable
+        return []
 
 @app.get("/api/tasks/{task_id}")
 async def get_task(task_id: str):
     """Get task details"""
     try:
         response = await http_client.get(f"/tasks/{task_id}")
-        return response.json()
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"error": "Task not found or backend unavailable", "task_id": task_id}
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": str(e), "task_id": task_id}
 
 @app.get("/api/tasks/{task_id}/tree")
 async def get_task_tree(task_id: str):
